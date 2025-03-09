@@ -28,8 +28,14 @@ DATABASE_URL=a
 
 ---
 
-1. Docker Run
+1. Build Docker Image
 
-```Dockerfile
-docker run -dp 8000:8000 -t trading-server:latest .
+```bash
+docker build -t trading-server:latest .
+```
+
+2. Run Docker Container
+
+```bash
+docker run -dp 8000:8000 --name trading-server trading-server:latest
 ```
