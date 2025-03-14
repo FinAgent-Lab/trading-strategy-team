@@ -20,6 +20,12 @@ DATABASE_URL=a
 
 3. 서버 실행
 
+### Local Play
+
+- `run.sh` 파일을 이용해서 서버 실행 시, Fastapi 서버"만" 실행이 되며, DB는 따로 실행되지 않습니다.
+- port는 8000번을 사용합니다.
+- API Docs는 `http://localhost:8000/api-docs` 링크를 통해 들어가실 수 있습니다.
+
 ```bash
 ./run.sh
 ```
@@ -28,14 +34,11 @@ DATABASE_URL=a
 
 ---
 
-1. Build Docker Image
+1. Compose up
 
 ```bash
-docker build -t trading-server:latest .
-```
+docker-compose up -d
 
-2. Run Docker Container
-
-```bash
-docker run -dp 8000:8000 --name trading-server trading-server:latest
+# 혹은
+docker compose up -d
 ```
