@@ -16,6 +16,7 @@
 
 ```
 DATABASE_URL=a
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY
 ```
 
 3. 서버 실행
