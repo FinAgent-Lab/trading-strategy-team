@@ -10,7 +10,9 @@ requires-python = ">=3.10"
 dependencies = [
     "uvicorn (>=0.34.0,<0.35.0)",
     "fastapi (>=0.115.11,<0.116.0)",
-    "python-dotenv (>=1.0.1,<2.0.0)"
+    "python-dotenv (>=1.0.1,<2.0.0)",
+    "langchain-openai (>=0.3.8,<0.4.0)",
+    "langgraph (>=0.3.10,<0.4.0)"
 ]
 
 [tool.poetry]
@@ -20,3 +22,6 @@ packages = [{include = "src"}]
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"

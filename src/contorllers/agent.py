@@ -1,9 +1,13 @@
-from fastapi import APIRouter
-from src.services.agent import get_agent
+from fastapi import APIRouter, Depends
+from src.dtos.tradingAgent.chatDto import TradingAgentChatDto
+from src.services.tradingAgent import TradingAgentService
 
-agent_router = router = APIRouter(prefix="/api/agent")
+agent_router = router = APIRouter(prefix="/agent")
 
 
-@router.get("/")
-def agent(data: str, model: str):
-    return get_agent()
+@router.post("/trading/chat")
+async def chat_trading_agent(
+    input: TradingAgentChatDto,
+    trading_agent_service: TradingAgentService = Depends(lambda: TradingAgentService()),
+):
+    return trading_agent_service.chat_trading_agent(input.message)
