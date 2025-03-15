@@ -13,10 +13,6 @@ class Global:
 
     @classmethod
     def validate_env(cls):
-        print(cls.env.DATABASE_URL)
-        print(cls.env.OPENAI_API_KEY)
-        print(cls.env.KIS_APP_KEY)
-        print(cls.env.KIS_SECRET_KEY)
         from pydantic import BaseModel, Field
 
         class EnvValidator(BaseModel):
