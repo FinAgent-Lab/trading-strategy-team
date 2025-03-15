@@ -58,8 +58,6 @@ class KisService:
         해외 주식 기간별 시세
         """
 
-        trade = TRADE_ID["usa"]["buy"]
-
         # try:
         print("-----input-----")
         print(input)
@@ -71,7 +69,7 @@ class KisService:
                 "Authorization": f"Bearer {access_token}",
                 "appkey": Global.env.KIS_APP_KEY,
                 "appsecret": Global.env.KIS_SECRET_KEY,
-                "tr_id": trade,
+                "tr_id": "HHDFS76240000",
             },
             params=input,
         )
