@@ -11,8 +11,6 @@ app = FastAPI(
 
 app.include_router(index_router)
 
-print(Global.env.DATABASE_URL)
-
 
 @app.get("/")
 def read_root():
