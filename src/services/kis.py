@@ -22,7 +22,7 @@ class KisService:
             self._initialized = True
             self._data = {}
 
-            # self.url = "https://openapi.koreainvestment.com:9443" # 실전 투자 url
+            # self.url = "https://openapi.koreainvestment.com:9443"  # 실전 투자 url
 
             self.url = "https://openapivts.koreainvestment.com:29443"  # 모의 투자 url
 
@@ -30,9 +30,6 @@ class KisService:
         """
         KIS 액세스 토큰 발급
         """
-
-        print(Global.env.KIS_APP_KEY)
-        print(Global.env.KIS_SECRET_KEY)
 
         response = requests.post(
             url=f"{self.url}/oauth2/tokenP",
