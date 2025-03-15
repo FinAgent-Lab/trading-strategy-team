@@ -15,8 +15,18 @@
 - 최상위 폴더에 `.env` 파일을 생성하고 다음과 같은 환경변수들을 설정해주세요.
 
 ```
-DATABASE_URL=a
+POSTGRES_USER=uni
+POSTGRES_PASSWORD=1234
+POSTGRES_DB=trading
+POSTGRES_PORT=5454
+DATABASE_URL=postgresql://uni:1234@postgres:5454/trading
+
+# OpenAI
 OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+
+# KIS
+KIS_APP_KEY=aa
+KIS_SECRET_KEY=a
 ```
 
 3. 서버 실행
