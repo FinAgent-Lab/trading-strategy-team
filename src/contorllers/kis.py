@@ -56,7 +56,9 @@ async def get_overseas_stock_daily_price(
     input: TradeDto.GetOverseasStockDailyPriceInput,
     kis_service: KisService = Depends(lambda: KisService()),
 ):
-    return kis_service.get_overseas_stock_daily_price(access_token, input)
+    return kis_service.get_overseas_stock_daily_price(
+        {**input, "access_token": access_token}
+    )
 
 
 @router.post(

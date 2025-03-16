@@ -31,12 +31,15 @@ class TradeNestedDto(BaseModel):
 
 class TradeDto:
     class GetOverseasStockDailyPriceInput(BaseModel):
-        AUTH: str = ""  # 사용자권한정보. (""로 설정)
-        EXCD: str = "NAS"  # 거래소코드. 나스닥 NAS
-        SYMB: str = "TSLA"  # 중목코드 ex) TSLA
-        GUBN: str = "0"  # 일/주/월 구분. 0: 일, 1: 주, 2: 월
-        BYMD: str = ""  # 조회기준일자 YYYYMMDD(공란시 오늘 날짜로 설정)
-        MODP: str = "1"  # 수정주가반영여부 0: 수정주가 미반영, 1: 수정주가 반영
+        access_token: str
+        AUTH: str = Field(default="")  # 사용자권한정보. (""로 설정)
+        EXCD: str = Field(default="NAS")  # 거래소코드. 나스닥 NAS
+        SYMB: str = Field(default="TSLA")  # 중목코드 ex) TSLA
+        GUBN: str = Field(default="0")  # 일/주/월 구분. 0: 일, 1: 주, 2: 월
+        BYMD: str = Field(default="")  # 조회기준일자 YYYYMMDD(공란시 오늘 날짜로 설정)
+        MODP: str = Field(
+            default="1"
+        )  # 수정주가반영여부 0: 수정주가 미반영, 1: 수정주가 반영
 
     class GetOverseasStockDailyPriceOutput(BaseModel):
         rt_cd: str = Field(

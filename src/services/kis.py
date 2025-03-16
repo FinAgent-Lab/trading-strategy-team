@@ -3,6 +3,7 @@ import requests
 from src.dtos.kis.tradeDto import TradeDto
 from src.config import Global
 from src.utils.constants.trId import TRADE_ID
+from langchain_core.tools import tool
 
 
 class KisService:
@@ -49,13 +50,19 @@ class KisService:
 
         return body["access_token"]
 
+    @tool
+    @staticmethod
     def get_overseas_stock_daily_price(
-        self,
-        access_token: str,
         input: TradeDto.GetOverseasStockDailyPriceInput,
     ) -> TradeDto.GetOverseasStockDailyPriceOutput:
         """
-        해외 주식 기간별 시세
+        # 해외 주식 기간별 시세
+        You can get a periodical market price of foreign stocks. "AUTH" is always an empty string,
+        "EXCD" should always be "NAS", where "NAS" stands for Nasdaq.
+        "SYMB" refers to the stock code.
+        "GUBN" stands for days if "0", weeks if "1", and months if "2".
+        "BYMD" means the reference date of the query and has an empty string as a value.
+        "MODP" means "zero" means non-reflective, and "1" means "1" as default.
         """
 
         try:
@@ -63,10 +70,12 @@ class KisService:
             print(input)
             print("-----input-----")
 
+            url = "https://openapivts.koreainvestment.com:29443"
+
             response = requests.get(
-                url=f"{self.url}/uapi/overseas-price/v1/quotations/dailyprice",
+                url=f"{url}/uapi/overseas-price/v1/quotations/dailyprice",
                 headers={
-                    "Authorization": f"Bearer {access_token}",
+                    "Authorization": f"Bearer {input.access_token}",
                     "appkey": Global.env.KIS_APP_KEY,
                     "appsecret": Global.env.KIS_SECRET_KEY,
                     "tr_id": "HHDFS76240000",
