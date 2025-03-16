@@ -52,41 +52,41 @@ class KisService:
     def get_overseas_stock_daily_price(
         self,
         access_token: str,
-        input: TradeDto.GetOverseasStockDailyPriceInputDto,
-    ) -> dict:
+        input: TradeDto.GetOverseasStockDailyPriceInput,
+    ) -> TradeDto.GetOverseasStockDailyPriceOutput:
         """
         해외 주식 기간별 시세
         """
 
-        # try:
-        print("-----input-----")
-        print(input)
-        print("-----input-----")
+        try:
+            print("-----input-----")
+            print(input)
+            print("-----input-----")
 
-        response = requests.get(
-            url=f"{self.url}/uapi/overseas-price/v1/quotations/dailyprice",
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "appkey": Global.env.KIS_APP_KEY,
-                "appsecret": Global.env.KIS_SECRET_KEY,
-                "tr_id": "HHDFS76240000",
-            },
-            params=input,
-        )
+            response = requests.get(
+                url=f"{self.url}/uapi/overseas-price/v1/quotations/dailyprice",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "appkey": Global.env.KIS_APP_KEY,
+                    "appsecret": Global.env.KIS_SECRET_KEY,
+                    "tr_id": "HHDFS76240000",
+                },
+                params=input,
+            )
 
-        print(f"📌 요청 URL: {response.url}")
-        print(f"🔹 응답 코드: {response.status_code}")
-        print(f"🔹 응답 내용: {response.text}")
+            print(f"📌 요청 URL: {response.url}")
+            print(f"🔹 응답 코드: {response.status_code}")
+            print(f"🔹 응답 내용: {response.text}")
 
-        return response.json()
-        # except Exception as e:
-        #     print(e)
-        #     raise e
+            body: TradeDto.GetOverseasStockDailyPriceOutput = response.json()
+        except Exception as e:
+            print(e)
+            raise e
 
     def order_overseas_stock(
         self,
         access_token: str,
-        order_data: TradeDto.OrderOverseasStockInputDto,
+        order_data: TradeDto.OrderOverseasStockInput,
         isBuy: bool,
     ) -> dict:
         """
@@ -116,7 +116,7 @@ class KisService:
     def book_overseas_stock_order(
         self,
         access_token: str,
-        order_data: TradeDto.BookOverseasStockOrderInputDto,
+        order_data: TradeDto.BookOverseasStockOrderInput,
         isBuy: bool,
     ):
         """
