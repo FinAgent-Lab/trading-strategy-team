@@ -79,6 +79,8 @@ class KisService:
             print(f"🔹 응답 내용: {response.text}")
 
             body: TradeDto.GetOverseasStockDailyPriceOutput = response.json()
+
+            return body
         except Exception as e:
             print(e)
             raise e
