@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-from src.agents.hansuAgent.hansuAgent import HansuAgent
 from src.services.practice import PracticeService
 from src.dtos.tradingAgent.chatDto import TradingAgentChatDto
 from src.services.tradingAgent import TradingAgentService
