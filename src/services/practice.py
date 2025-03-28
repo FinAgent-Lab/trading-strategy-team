@@ -1,10 +1,8 @@
-from src.agents.tradeAgent.graph import TradeGraph
-from src.agents.tradingAgent.tradingAgent import TradingAgent
+from src.agents.practiceAgent.graph import graph
 
 
-class TradingAgentService:
+class PracticeService:
     _instance = None
-    graph: TradeGraph
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -18,11 +16,7 @@ class TradingAgentService:
         ):  # 이미 초기화된 경우는 다시 초기화하지 않음
             self._initialized = True
             self._data = {}
-            self.graph = TradeGraph()
+            self.graph = graph
 
-    def chat_trading_agent(self, input: str):
-        agent = TradingAgent()
-        return agent.get_response(input)
-
-    def trade_trading_agent(self, input: str):
-        return self.graph.invoke({"messages": [("user", input)]})
+    def chat_practice_agent(self, message: str):
+        return self.graph.invoke({"messages": [("user", message)]})
