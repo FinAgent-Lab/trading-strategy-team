@@ -1,6 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
-from src.dtos.kis.tradeDto import TradeDto
 from src.services.kis import KisService
 from src.config import Global
 from src.agents.tradingAgent.prompt import TradingAgentPrompt
@@ -33,7 +32,7 @@ class TradingAgent:
             )
         ]
 
-        print("=====================함수 스키마 정보=======================")
+        print("=====================함수 스키마 정보======================")
         print()
         print(KisService.get_overseas_stock_daily_price.args_schema.model_json_schema())
         print()
