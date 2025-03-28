@@ -9,6 +9,7 @@ app = FastAPI(
     docs_url="/api-docs",
 )
 
+# app에 미리 만들어둔 index_router를 붙이는 것.
 app.include_router(index_router)
 
 

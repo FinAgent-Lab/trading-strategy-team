@@ -27,13 +27,17 @@ class KisService:
 
             self.url = "https://openapivts.koreainvestment.com:29443"  # 모의 투자 url
 
-    def get_access_token(self) -> str:
+    @tool
+    @staticmethod
+    def get_access_token() -> str:
         """
         KIS 액세스 토큰 발급
         """
 
+        url = "https://openapivts.koreainvestment.com:29443"
+
         response = requests.post(
-            url=f"{self.url}/oauth2/tokenP",
+            url=f"{url}/oauth2/tokenP",
             headers={
                 "Content-Type": "application/json; charset=UTF-8",
             },
@@ -66,10 +70,6 @@ class KisService:
         """
 
         try:
-            print("-----input-----")
-            print(input)
-            print("-----input-----")
-
             url = "https://openapivts.koreainvestment.com:29443"
 
             response = requests.get(
