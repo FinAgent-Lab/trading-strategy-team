@@ -17,6 +17,7 @@ anytree = "^2.12.1"
 numpy = "^2.2.4"
 pandas = "^2.2.3"
 yfinance = "^0.2.55"
+matplotlib = "^3.10.1"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
