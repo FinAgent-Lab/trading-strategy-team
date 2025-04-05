@@ -3,7 +3,6 @@ import requests
 from src.dtos.kis.tradeDto import TradeDto
 from src.config import Global
 from src.utils.constants.trId import TRADE_ID
-from langchain_core.tools import tool
 
 
 class KisService:
@@ -27,17 +26,13 @@ class KisService:
 
             self.url = "https://openapivts.koreainvestment.com:29443"  # 모의 투자 url
 
-    @tool
-    @staticmethod
-    def get_access_token() -> str:
+    def get_access_token(self) -> str:
         """
         KIS 액세스 토큰 발급
         """
 
-        url = "https://openapivts.koreainvestment.com:29443"
-
         response = requests.post(
-            url=f"{url}/oauth2/tokenP",
+            url=f"{self.url}/oauth2/tokenP",
             headers={
                 "Content-Type": "application/json; charset=UTF-8",
             },
@@ -54,38 +49,29 @@ class KisService:
 
         return body["access_token"]
 
-    @tool
-    @staticmethod
     def get_overseas_stock_daily_price(
+        self,
         input: TradeDto.GetOverseasStockDailyPriceInput,
     ) -> TradeDto.GetOverseasStockDailyPriceOutput:
         """
-        # 해외 주식 기간별 시세
-        You can get a periodical market price of foreign stocks. "AUTH" is always an empty string,
-        "EXCD" should always be "NAS", where "NAS" stands for Nasdaq.
-        "SYMB" refers to the stock code.
-        "GUBN" stands for days if "0", weeks if "1", and months if "2".
-        "BYMD" means the reference date of the query and has an empty string as a value.
-        "MODP" means "zero" means non-reflective, and "1" means "1" as default.
+        해외 주식 기간별 시세
         """
 
         try:
-            url = "https://openapivts.koreainvestment.com:29443"
-
             response = requests.get(
-                url=f"{url}/uapi/overseas-price/v1/quotations/dailyprice",
+                url=f"{self.url}/uapi/overseas-price/v1/quotations/dailyprice",
                 headers={
                     "Authorization": f"Bearer {input.access_token}",
                     "appkey": Global.env.KIS_APP_KEY,
                     "appsecret": Global.env.KIS_SECRET_KEY,
                     "tr_id": "HHDFS76240000",
                 },
-                params=input,
+                params=input.model_dump(),
             )
 
-            print(f"📌 요청 URL: {response.url}")
-            print(f"🔹 응답 코드: {response.status_code}")
-            print(f"🔹 응답 내용: {response.text}")
+            # print(f"📌 요청 URL: {response.self.url}")
+            # print(f"🔹 응답 코드: {response.status_code}")
+            # print(f"🔹 응답 내용: {response.text}")
 
             body: TradeDto.GetOverseasStockDailyPriceOutput = response.json()
 
@@ -96,27 +82,26 @@ class KisService:
 
     def order_overseas_stock(
         self,
-        access_token: str,
-        order_data: TradeDto.OrderOverseasStockInput,
-        isBuy: bool,
+        input: TradeDto.OrderOverseasStockInput,
+        is_buy: bool,
     ) -> dict:
         """
         해외 주식 주문
         """
 
-        trade = TRADE_ID["usa"]["buy"] if isBuy else TRADE_ID["usa"]["sell"]
+        trade = TRADE_ID["usa"]["buy"] if is_buy else TRADE_ID["usa"]["sell"]
 
         try:
             response = requests.post(
                 url=f"{self.url}/uapi/overseas-stock/v1/trading/order",
                 headers={
                     "Content-Type": "application/json; charset=UTF-8",
-                    "Authorization": f"Bearer {access_token}",
+                    "Authorization": f"Bearer {input.access_token}",
                     "appkey": Global.env.KIS_APP_KEY,
                     "appsecret": Global.env.KIS_SECRET_KEY,
                     "tr_id": trade,
                 },
-                data=json.dumps(order_data),
+                data=input.model_dump_json(),
             )
 
             return response.json()
@@ -126,30 +111,94 @@ class KisService:
 
     def book_overseas_stock_order(
         self,
-        access_token: str,
-        order_data: TradeDto.BookOverseasStockOrderInput,
-        isBuy: bool,
+        input: TradeDto.BookOverseasStockOrderInput,
+        is_buy: bool,
     ):
         """
         해외 주식 주문 예약
         """
 
-        trade = TRADE_ID["usa"]["buy"] if isBuy else TRADE_ID["usa"]["sell"]
+        trade = TRADE_ID["usa"]["buy"] if is_buy else TRADE_ID["usa"]["sell"]
 
         try:
             response = requests.post(
-                url=f"{self.url}/uapi/overseas-stock/v1/trading/order",
+                url=f"{self.url}/uapi/overseas-stock/v1/trading/order-resv",
                 headers={
                     "Content-Type": "application/json; charset=UTF-8",
-                    "Authorization": f"Bearer {access_token}",
+                    "Authorization": f"Bearer {input.access_token}",
                     "appkey": Global.env.KIS_APP_KEY,
                     "appsecret": Global.env.KIS_SECRET_KEY,
                     "tr_id": trade,
                 },
-                data=json.dumps(order_data),
+                data=input.model_dump_json(),
             )
 
             return response.json()
         except Exception as e:
             print(e)
             raise e
+
+    def cancel_overseas_stock_order(
+        self,
+        input: TradeDto.CancelOverseasStockOrderInput,
+    ):
+        """
+        해외 주식 주문 취소
+        """
+
+        trade = TRADE_ID["usa"]["book_cancel"]
+
+        try:
+            response = requests.post(
+                url=f"{self.url}/uapi/overseas-stock/v1/trading/order-resv-ccnl",
+                headers={
+                    "Content-Type": "application/json; charset=UTF-8",
+                    "Authorization": f"Bearer {input.access_token}",
+                    "appkey": Global.env.KIS_APP_KEY,
+                    "appsecret": Global.env.KIS_SECRET_KEY,
+                    "tr_id": trade,
+                },
+                data=input.model_dump_json(),
+            )
+
+            return response.json()
+        except Exception as e:
+            print(e)
+            raise e
+
+    def get_overseas_stock_order_resv_list(
+        self,
+        input: TradeDto.GetOverseasStockOrderResvListInput,
+    ):
+        """
+        해외 주식 주문 예약 조회. 실전 투자인 경우에만 사용가능하다.
+        """
+
+        trade = TRADE_ID["usa"]["order_resv_list"]
+
+        try:
+            response = requests.get(
+                url=f"{self.url}/uapi/overseas-stock/v1/trading/order-resv-list",
+                headers={
+                    "Content-Type": "application/json; charset=UTF-8",
+                    "Authorization": f"Bearer {input.access_token}",
+                    "appkey": Global.env.KIS_APP_KEY,
+                    "appsecret": Global.env.KIS_SECRET_KEY,
+                    "tr_id": trade,
+                },
+                params=input.model_dump(),
+            )
+
+            return response.json()
+        except Exception as e:
+            print(e)
+            raise e
+
+    # def get_overseas_balance(
+    #     self,
+    #     access_token: str,
+    #     order_data: TradeDto.GetOverseasBalanceInput,
+    # ):
+    #     """
+    #     해외 주식 잔고 조회
+    #     """
