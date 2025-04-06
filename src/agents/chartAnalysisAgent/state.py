@@ -1,13 +1,14 @@
-from typing import TypedDict, Annotated, Optional
+from typing import TypedDict, Annotated
 from langgraph.graph import add_messages
-import pandas as pd
 
 
 class ChartAnalysisState(TypedDict):
+    messages: Annotated[list, add_messages]
+    processed: Annotated[list, add_messages]
     symbol: str
     exchange: str
-    df: Optional[pd.DataFrame]
-    column_description: Optional[str]
-    chart_analysis: Optional[str]
-    future_prediction: Optional[str]
-    messages: Annotated[list, add_messages]
+    access_token: str
+    df: any
+    column_description: str | None
+    chart_analysis: str | None
+    future_prediction: str | None
