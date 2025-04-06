@@ -1,38 +1,44 @@
+from langchain_openai import ChatOpenAI
+from typing_extensions import Self
 from langgraph.graph import StateGraph, START, END
+from langgraph.graph.state import CompiledStateGraph
+from src.config import Global
 from src.agents.chartAnalysisAgent.state import ChartAnalysisState
-from src.agents.chartAnalysisAgent.node import (
-    get_stock_data,
-    describe_columns,
-    analyze_chart,
-    predict_future,
-    plot_chart,
-    summarize_results
-)
+from src.agents.chartAnalysisAgent.node import ChartAnalysisNode
+from src.utils.graphBuilder import GraphBuilder
 
 
-# LangGraph Workflow 구성
-def create_chart_analysis_graph():
-    workflow = StateGraph(ChartAnalysisState)
-    
-    # 노드 추가
-    workflow.add_node("get_stock_data", get_stock_data)
-    workflow.add_node("describe_columns", describe_columns)
-    workflow.add_node("analyze_chart", analyze_chart)
-    workflow.add_node("predict_future", predict_future)
-    workflow.add_node("plot_chart", plot_chart)
-    workflow.add_node("summarize_results", summarize_results)
-    
-    # Workflow 순서 설정
-    workflow.set_entry_point("get_stock_data")
-    workflow.add_edge("get_stock_data", "describe_columns")
-    workflow.add_edge("describe_columns", "analyze_chart")
-    workflow.add_edge("analyze_chart", "predict_future")
-    workflow.add_edge("predict_future", "plot_chart")
-    workflow.add_edge("plot_chart", "summarize_results")
-    workflow.add_edge("summarize_results", END)
-    
-    return workflow.compile()
+class ChartAnalysisGraph(GraphBuilder):
+    _builder: StateGraph
+    graph: CompiledStateGraph
 
+    def __init__(self):
+        self._builder = StateGraph(ChartAnalysisState)
+        self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=Global.env.OPENAI_API_KEY)
+        self.build()
 
-# 그래프 인스턴스 생성
-chart_analysis_graph = create_chart_analysis_graph()
+    def build(self) -> Self:
+        # 노드 추가
+        self._builder.add_node("analyze", ChartAnalysisNode(self.llm))
+
+        # 시작 엣지
+        self._builder.add_edge(START, "analyze")
+        
+        # 종료 엣지 - 분석이 완료되면 바로 종료
+        self._builder.add_edge("analyze", END)
+
+        self.graph = self._builder.compile()
+        return self
+
+    def get_nodes(self) -> dict[str, any]:
+        return self._builder.nodes()
+
+    def get_edges(self) -> list[tuple[str, str]]:
+        return self._builder.edges()
+
+    def invoke(self, input: dict[str, any]):
+        print(f"Graph input: {input}")
+        response = self.graph.invoke(input)
+        res = response["messages"][-1]
+        print(f"Graph response: {res}")
+        return res
