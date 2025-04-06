@@ -32,13 +32,6 @@ class TradingAgent:
             )
         ]
 
-        print("=====================함수 스키마 정보======================")
-        print()
-        print(KisService.get_overseas_stock_daily_price.args_schema.model_json_schema())
-        print()
-        print("=======================================================")
-        print()
-
         self.llm_with_tools = self.llm.bind_tools(self.tools)
 
     def get_response(self, user_input: str) -> str:
