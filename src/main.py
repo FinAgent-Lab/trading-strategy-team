@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI
 from src.config import Global
-from src.contorllers.index import index_router
+from src.controllers.index import index_router
 
 Global.validate_env()
 
