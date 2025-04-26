@@ -16,17 +16,22 @@ class IdeaGraph:
         self.build()
 
     def build(self) -> Self:
-        # 가설 생성 노드 추가
         self._builder.add_node("generate_hypothesis", IdeaNode(self.llm))
-
-        # 시작 엣지 설정
         self._builder.add_edge(START, "generate_hypothesis")
 
-        # 조건부 엣지 추가
         def should_continue(state: IdeaState) -> str:
-            """가설 생성이 완료되면 종료"""
-            if state["hypothesis"]:
+            iteration_count = state.get("iteration_count")
+            if iteration_count is None:
+                iteration_count = 0
+            status = state.get("status") or "pending"
+
+            if iteration_count >= 3:
                 return END
+
+            if status in ["success", "failed"]:
+                return END
+
+            state["iteration_count"] = iteration_count + 1
             return "generate_hypothesis"
 
         self._builder.add_conditional_edges(
@@ -47,6 +52,5 @@ class IdeaGraph:
     def invoke(self, input: dict[str, any]):
         print(f"Graph input: {input}")
         response = self.graph.invoke(input)
-        res = response["messages"][-1].content
-        print(f"Graph response: {res}")
-        return res 
+        print(f"Graph response: {response}")
+        return response.get("hypotheses", {})
