@@ -16,7 +16,6 @@ class TradeGraph(GraphBuilder):
         # TemplateState 자리에 사용할 State를 넣어주세요.
         self._builder = StateGraph(TradeState)
         self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=Global.env.OPENAI_API_KEY)
-
         self.build()
 
     def build(self) -> Self:

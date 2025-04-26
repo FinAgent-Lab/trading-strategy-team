@@ -1,4 +1,7 @@
 #! /bin/bash
+#!/bin/bash
+export PATH="$HOME/.local/bin:$PATH"
+
 poetry env activate
 
 poetry install
