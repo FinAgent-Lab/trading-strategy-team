@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from src.contorllers.agent import agent_router
-from src.contorllers.kis import kis_router
+from src.controllers.agent import agent_router
+from src.controllers.kis import kis_router
 
 index_router = router = APIRouter(prefix="/api")
 

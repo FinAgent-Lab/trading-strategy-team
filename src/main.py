@@ -2,7 +2,7 @@ import os
 from pydantic import BaseModel
 from fastapi import FastAPI
 from src.config import Global
-# from src.contorllers.index import index_router
+from src.controllers.index import index_router
 from src.agents.ideaAgent.ideaAgent import IdeaAgent
 
 Global.validate_env()
