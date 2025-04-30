@@ -16,6 +16,7 @@ from typing import List
 from pydantic import BaseModel, Field
 from src.dtos.kis.tradeDto import TradeDto
 from src.agents.tools.chartTool import get_overseas_stock_daily_price
+import pandas_ta as ta
 
 
 # Tool의 입력 스키마 정의
@@ -80,7 +81,7 @@ class ChartAnalysisAgent:
             print("[ChartAnalysis] 주가 데이터 요청 준비 중...")
             tool_input = {
                 "input": {
-                    "access_token": access_token,  # 응답 전체를 access_token으로 사용
+                    "access_token": access_token,
                     "AUTH": "",
                     "EXCD": exchange,
                     "SYMB": symbol,
@@ -89,7 +90,7 @@ class ChartAnalysisAgent:
                     "MODP": "0"
                 }
             }
-            print("[ChartAnalysis] 입력 데이터 구성 완료")  # 보안을 위해 전체 입력 데이터는 출력하지 않음
+            print("[ChartAnalysis] 입력 데이터 구성 완료")
             
             # Tool 직접 호출
             print("[ChartAnalysis] KIS API 호출 중...")
@@ -100,16 +101,12 @@ class ChartAnalysisAgent:
             if result.get('rt_cd') != '0':
                 raise Exception(f"API 오류: {result.get('msg1', '알 수 없는 오류')}")
                 
-            # 데이터프레임 변환 및 분석
-            print("[ChartAnalysis] 데이터 분석 시작...")
             output2_list = result.get('output2', [])
             if output2_list and len(output2_list) > 0:
-                # 모든 데이터를 리스트로 변환
                 data_list = []
                 for output2 in output2_list:
                     date_str = output2['xymd']
                     formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
-                    
                     data_list.append({
                         'date': formatted_date,
                         'close': float(output2['clos']),
@@ -118,34 +115,44 @@ class ChartAnalysisAgent:
                         'low': float(output2['low']),
                         'volume': int(output2['tvol'])
                     })
-                
-                # 전체 데이터로 데이터프레임 생성
+
                 data = pd.DataFrame(data_list)
+                data["date"] = pd.to_datetime(data["date"])
+                data.sort_values("date", inplace=True)
+
+                # ✅ SMA 계산 추가
+                data["SMA_5"] = ta.sma(data["close"], length=5)
+                data["SMA_20"] = ta.sma(data["close"], length=20)
+                data["SMA_60"] = ta.sma(data["close"], length=60)
+
                 print(f"[ChartAnalysis] 데이터프레임 생성 완료 (총 {len(data)} 행):")
-                print(f"[ChartAnalysis] 최근 5일 데이터:\n{data.head()}")
-                
-                # 분석 프롬프트에도 전체 데이터 반영
+                print(f"[ChartAnalysis] 최근 5일 데이터:\n{data.tail()}")
+
+                # ✅ SMA 포함한 프롬프트
                 analysis_prompt = f"""
-                {symbol} 주식의 최근 {len(data)}일간의 거래 데이터입니다:
-                
-                최근 종가: ${data['close'].iloc[0]:,.2f}
+                {symbol} 주식의 최근 {len(data)}일간의 거래 및 이동평균선(SMA) 데이터입니다:
+
+                최근 종가: ${data['close'].iloc[-1]:,.2f}
                 최고가: ${data['high'].max():,.2f}
                 최저가: ${data['low'].min():,.2f}
                 평균 거래량: {int(data['volume'].mean()):,}
-                
-                이 데이터를 기반으로 기술적 분석을 수행하고, 다음 사항들을 포함하여 분석해주세요:
-                1. 최근 {len(data)}일간의 가격 추세와 거래량 패턴
-                2. 주요 가격 레벨과 지지/저항 구간
-                3. 단기 매매 관점에서의 투자 위험도
-                4. 향후 가격 움직임에 대한 전망
+
+                최근 10일 데이터 (SMA 포함):
+                {data[['date', 'close', 'SMA_5', 'SMA_20', 'SMA_60']].tail(10).to_string(index=False)}
+
+                다음을 분석해주세요:
+                1. 최근 가격 추세와 거래량 패턴
+                2. 단기/중기/장기 이동평균선 간 교차(골든/데드 크로스)
+                3. 주요 지지/저항 구간
+                4. 현재 종가가 어떤 이동평균선 위/아래에 위치하는지
+                5. 향후 가격 움직임에 대한 전망
                 """
+
                 print("[ChartAnalysis] 프롬프트 생성 완료")
-                
-                # AI 분석 수행
                 print("[ChartAnalysis] AI 분석 수행 중...")
                 analysis_result = self.llm.invoke(analysis_prompt)
                 print("[ChartAnalysis] AI 분석 완료")
-                
+
                 return analysis_result
             else:
                 print("[ChartAnalysis] 오류: output2 데이터가 없습니다")
