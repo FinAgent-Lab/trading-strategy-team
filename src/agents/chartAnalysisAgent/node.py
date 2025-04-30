@@ -138,6 +138,10 @@ class ChartAnalysisAgent:
                 data["BB_middle"] = bbands["BBM_20_2.0"]
                 data["BB_lower"] = bbands["BBL_20_2.0"]
 
+                # ✅ ADX (Average Directional Index) 계산 (기본: 14일 기준)
+                adx = ta.adx(high=data["high"], low=data["low"], close=data["close"], length=14)
+                data["ADX_14"] = adx["ADX_14"]
+
                 print(f"[ChartAnalysis] 데이터프레임 생성 완료 (총 {len(data)} 행):")
                 print(f"[ChartAnalysis] 최근 5일 데이터:\n{data.tail()}")
 
@@ -151,16 +155,18 @@ class ChartAnalysisAgent:
                 RSI(14일): {data['RSI_14'].iloc[-1]:.2f}
                 MACD: {data['MACD'].iloc[-1]:.2f}, Signal: {data['MACD_signal'].iloc[-1]:.2f}, Hist: {data['MACD_hist'].iloc[-1]:.2f}
                 볼린저 밴드(20일): 상단 {data['BB_upper'].iloc[-1]:.2f}, 중단 {data['BB_middle'].iloc[-1]:.2f}, 하단 {data['BB_lower'].iloc[-1]:.2f}
+                ADX(14일): {data['ADX_14'].iloc[-1]:.2f}
 
                 최근 10일 데이터 (기술 지표 포함):
-                {data[['date', 'close', 'SMA_5', 'SMA_20', 'SMA_60', 'RSI_14', 'MACD', 'MACD_signal', 'MACD_hist', 'BB_upper', 'BB_middle', 'BB_lower']].tail(10).to_string(index=False)}
+                {data[['date', 'close', 'SMA_5', 'SMA_20', 'SMA_60', 'RSI_14', 'MACD', 'MACD_signal', 'MACD_hist', 'BB_upper', 'BB_middle', 'BB_lower', 'ADX_14']].tail(10).to_string(index=False)}
 
                 다음 내용을 중심으로 기술적 분석을 수행해주세요:
                 1. 가격 추세와 이동평균선 분석 (골든/데드크로스 포함)
                 2. RSI 기반 과매수/과매도 구간 판단
                 3. MACD 히스토그램 및 시그널선 교차 분석
                 4. 볼린저 밴드를 활용한 변동성 판단 및 현재 위치 평가
-                5. 주요 지지/저항 구간과 향후 주가 움직임 예측
+                5. ADX 수치를 기반으로 현재 추세 강도 진단
+                6. 주요 지지/저항 구간과 향후 주가 움직임 예측
                 """
 
                 print("[ChartAnalysis] 프롬프트 생성 완료")
