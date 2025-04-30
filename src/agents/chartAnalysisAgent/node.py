@@ -306,8 +306,7 @@ class ChartAnalysisNode(BaseNode):
                 "symbol": state['symbol'],
                 "exchange": state['exchange'],
                 "chart_analysis": state['chart_analysis'],
-                "future_prediction": state['future_prediction'],
-                "chart_path": state['chart_path']
+                "future_prediction": state['future_prediction']
             }
             
             return {
