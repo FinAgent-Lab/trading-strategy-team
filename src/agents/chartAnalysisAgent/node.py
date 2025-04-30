@@ -124,6 +124,8 @@ class ChartAnalysisAgent:
                 data["SMA_5"] = ta.sma(data["close"], length=5)
                 data["SMA_20"] = ta.sma(data["close"], length=20)
                 data["SMA_60"] = ta.sma(data["close"], length=60)
+                # ✅ RSI 계산 추가 (14일 기준)
+                data["RSI_14"] = ta.rsi(data["close"], length=14)
 
                 print(f"[ChartAnalysis] 데이터프레임 생성 완료 (총 {len(data)} 행):")
                 print(f"[ChartAnalysis] 최근 5일 데이터:\n{data.tail()}")
@@ -136,16 +138,16 @@ class ChartAnalysisAgent:
                 최고가: ${data['high'].max():,.2f}
                 최저가: ${data['low'].min():,.2f}
                 평균 거래량: {int(data['volume'].mean()):,}
+                RSI(14일): {data['RSI_14'].iloc[-1]:.2f}
 
-                최근 10일 데이터 (SMA 포함):
-                {data[['date', 'close', 'SMA_5', 'SMA_20', 'SMA_60']].tail(10).to_string(index=False)}
+                최근 10일 데이터 (SMA & RSI 포함):
+                {data[['date', 'close', 'SMA_5', 'SMA_20', 'SMA_60', 'RSI_14']].tail(10).to_string(index=False)}
 
-                다음을 분석해주세요:
-                1. 최근 가격 추세와 거래량 패턴
-                2. 단기/중기/장기 이동평균선 간 교차(골든/데드 크로스)
+                다음 내용을 중심으로 기술적 분석을 수행해주세요:
+                1. 가격 추세와 이동평균선 분석 (골든/데드크로스 포함)
+                2. RSI 수치를 기반으로 한 과매수/과매도 판단
                 3. 주요 지지/저항 구간
-                4. 현재 종가가 어떤 이동평균선 위/아래에 위치하는지
-                5. 향후 가격 움직임에 대한 전망
+                4. 향후 주가 움직임 예측 및 투자 조언
                 """
 
                 print("[ChartAnalysis] 프롬프트 생성 완료")
