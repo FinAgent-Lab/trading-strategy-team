@@ -212,11 +212,6 @@ class ChartAnalysisNode(BaseNode):
                 name="predict_future",
                 description="Predict future stock price movements",
                 func=self.predict_future,
-            ),
-            Tool(
-                name="plot_chart",
-                description="Create and save a chart visualization",
-                func=self.plot_chart,
             )
         ]
 
@@ -295,21 +290,6 @@ class ChartAnalysisNode(BaseNode):
         state['future_prediction'] = response.content
         return state
 
-    def plot_chart(self, state: ChartAnalysisState):
-        plt.figure(figsize=(10, 5))
-        plt.plot(state['df']["date"], state['df']["close"], marker="o", linestyle="-", label="종가 (Close)")
-        plt.xticks(rotation=45)
-        plt.title(f"{state['symbol']} 주가 차트 (30일)")
-        plt.xlabel("날짜")
-        plt.ylabel("가격 ($)")
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(f"static/charts/{state['symbol']}_chart.png")
-        plt.close()
-        
-        state['chart_path'] = f"/static/charts/{state['symbol']}_chart.png"
-        return state
-
     def invoke(self, state: ChartAnalysisState):
         try:
             # 데이터 가져오기
@@ -320,9 +300,6 @@ class ChartAnalysisNode(BaseNode):
             
             # 미래 예측
             state = self.predict_future(state)
-            
-            # 차트 생성
-            state = self.plot_chart(state)
             
             # 결과 생성
             result = {
