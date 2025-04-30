@@ -126,28 +126,34 @@ class ChartAnalysisAgent:
                 data["SMA_60"] = ta.sma(data["close"], length=60)
                 # ✅ RSI 계산 추가 (14일 기준)
                 data["RSI_14"] = ta.rsi(data["close"], length=14)
+                # ✅ MACD 계산 추가 (기본 설정: fast=12, slow=26, signal=9)
+                macd = ta.macd(data["close"])
+                data["MACD"] = macd["MACD_12_26_9"]
+                data["MACD_signal"] = macd["MACDs_12_26_9"]
+                data["MACD_hist"] = macd["MACDh_12_26_9"]
 
                 print(f"[ChartAnalysis] 데이터프레임 생성 완료 (총 {len(data)} 행):")
                 print(f"[ChartAnalysis] 최근 5일 데이터:\n{data.tail()}")
 
-                # ✅ SMA 포함한 프롬프트
                 analysis_prompt = f"""
-                {symbol} 주식의 최근 {len(data)}일간의 거래 및 이동평균선(SMA) 데이터입니다:
+                {symbol} 주식의 최근 {len(data)}일간의 거래 및 기술 지표 데이터입니다:
 
                 최근 종가: ${data['close'].iloc[-1]:,.2f}
                 최고가: ${data['high'].max():,.2f}
                 최저가: ${data['low'].min():,.2f}
                 평균 거래량: {int(data['volume'].mean()):,}
                 RSI(14일): {data['RSI_14'].iloc[-1]:.2f}
+                MACD: {data['MACD'].iloc[-1]:.2f}, Signal: {data['MACD_signal'].iloc[-1]:.2f}, Hist: {data['MACD_hist'].iloc[-1]:.2f}
 
-                최근 10일 데이터 (SMA & RSI 포함):
-                {data[['date', 'close', 'SMA_5', 'SMA_20', 'SMA_60', 'RSI_14']].tail(10).to_string(index=False)}
+                최근 10일 데이터 (SMA, RSI, MACD 포함):
+                {data[['date', 'close', 'SMA_5', 'SMA_20', 'SMA_60', 'RSI_14', 'MACD', 'MACD_signal', 'MACD_hist']].tail(10).to_string(index=False)}
 
                 다음 내용을 중심으로 기술적 분석을 수행해주세요:
                 1. 가격 추세와 이동평균선 분석 (골든/데드크로스 포함)
-                2. RSI 수치를 기반으로 한 과매수/과매도 판단
-                3. 주요 지지/저항 구간
-                4. 향후 주가 움직임 예측 및 투자 조언
+                2. RSI 수치를 기반으로 과매수/과매도 판단
+                3. MACD 분석: 교차 여부, 히스토그램 모양, 시그널선과의 관계
+                4. 주요 지지/저항 구간
+                5. 향후 주가 움직임 예측 및 투자 조언
                 """
 
                 print("[ChartAnalysis] 프롬프트 생성 완료")
