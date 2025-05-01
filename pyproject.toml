@@ -14,10 +14,14 @@ python-dotenv = ">=1.0.1,<2.0.0"
 langchain-openai = ">=0.3.8,<0.4.0"
 langgraph = ">=0.3.10,<0.4.0"
 anytree = "^2.12.1"
-numpy = "^2.2.4"
+numpy = "1.26.4"
 pandas = "^2.2.3"
 yfinance = "^0.2.55"
 matplotlib = "^3.10.1"
+lxml = "^5.3.2"
+lark = "^1.2.2"
+pandas-ta = {git = "https://github.com/twopirllc/pandas-ta.git", rev = "main"}
+langchain-experimental = "^0.3.4"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
