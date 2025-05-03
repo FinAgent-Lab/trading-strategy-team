@@ -99,7 +99,13 @@ class UserService:
 
     async def update_secret(self, input: CreateSecretDto, user_id: str) -> bool:
         await prisma.usersecret.update(
-            where={"key": input.key, "user_id": user_id, "deleted_at": None},
+            where={
+                "key_user_id": {
+                    "key": input.key,
+                    "user_id": user_id,
+                },
+                "deleted_at": None,
+            },
             data={
                 "value": input.value,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
