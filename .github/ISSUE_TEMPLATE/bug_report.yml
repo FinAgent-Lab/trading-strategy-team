@@ -38,6 +38,6 @@ body:
     attributes:
       label: 관련 로그/스크린샷
       description: 가능하면 콘솔 로그나 스크린샷을 첨부해주세요.
-      placeholder: 예: 콘솔 에러 로그나 오류 메시지
+      placeholder: 콘솔 에러 로그나 오류 메시지
     validations:
       required: false
