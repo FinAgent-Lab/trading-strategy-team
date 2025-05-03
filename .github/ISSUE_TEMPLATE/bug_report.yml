@@ -1,0 +1,43 @@
+name: 🐛 Bug Report
+description: 버그가 발생했을 때 사용하는 템플릿
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: input
+    id: env
+    attributes:
+      label: 사용 환경
+      description: 사용한 OS, Node 버전, 브라우저 등
+      placeholder: 예: macOS, Node.js v18, Chrome
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 버그 설명
+      description: 발생한 버그를 최대한 자세히 작성해주세요.
+      placeholder: 어떤 동작을 했고, 무엇이 잘못됐는지
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      description: 버그를 재현하기 위한 단계
+      placeholder: |
+        1. 페이지 이동
+        2. 버튼 클릭
+        3. 오류 발생
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 관련 로그/스크린샷
+      description: 가능하면 콘솔 로그나 스크린샷을 첨부해주세요.
+      placeholder: 예: 콘솔 에러 로그나 오류 메시지
+    validations:
+      required: false
