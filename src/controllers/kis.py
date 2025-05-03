@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from typing import Annotated
+from fastapi import APIRouter, Depends, Path
 
 from src.dtos.kis.tradeDto import TradeDto
 from src.services.kis import KisService
@@ -6,11 +7,12 @@ from src.services.kis import KisService
 kis_router = router = APIRouter(prefix="/kis")
 
 
-@router.get("/access-token")
+@router.get("/access-token/{user_id}")
 async def get_access_token(
+    user_id: Annotated[str, Path(..., description="User ID")],
     kis_service: KisService = Depends(lambda: KisService()),
 ):
-    return kis_service.get_access_token()
+    return await kis_service.get_access_token(user_id)
 
 
 @router.post(

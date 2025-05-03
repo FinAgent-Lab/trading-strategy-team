@@ -1,19 +1,6 @@
 version: "3.8"
 
 services:
-  app:
-    build:
-      context: .
-    container_name: trading-server
-    ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
-    environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
-    env_file:
-      - .env
-
   postgres:
     image: pgvector/pgvector:pg17
     container_name: trading-pgvector
@@ -25,7 +12,7 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   pg_data:

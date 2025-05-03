@@ -6,13 +6,19 @@ from src.config import Global
 from src.agents.tradeAgent.state import TradeState
 from src.agents.tradeAgent.tradeNode import TradeNode
 from src.utils.graphBuilder import GraphBuilder
+from src.services.chat import ChatService
+from src.utils.types.ChatType import ChatAgent, ChatRole
+from src.dtos.chat.chatDto import CreateChatDto
 
 
 class TradeGraph(GraphBuilder):
     _builder: StateGraph
     graph: CompiledStateGraph
+    chat_service: ChatService
 
     def __init__(self):
+        self.chat_service = ChatService()
+
         # TemplateState 자리에 사용할 State를 넣어주세요.
         self._builder = StateGraph(TradeState)
         self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=Global.env.OPENAI_API_KEY)
@@ -27,18 +33,19 @@ class TradeGraph(GraphBuilder):
 
         # 시작 엣지. 시작할 노드를 적어주세요.
         self._builder.add_edge(START, "trade")
+        self._builder.add_edge("trade", END)
         # self._builder.add_edge("trade", "trade")
 
         # 조건부 엣지 추가
-        def should_continue(state: TradeState) -> str:
-            """LLM 응답에 tool call이 있으면 'trade'로, 없으면 'end'로 이동"""
-            if state["processed"][-1].content == "content":
-                return END
-            return "trade"
+        # def should_continue(state: TradeState) -> str:
+        #     """LLM 응답에 tool call이 있으면 'trade'로, 없으면 'end'로 이동"""
+        #     if state["processed"][-1].content == "content":
+        #         return END
+        #     return "trade"
 
-        self._builder.add_conditional_edges(
-            "trade", should_continue, {"trade": "trade", END: END}
-        )
+        # self._builder.add_conditional_edges(
+        #     "trade", should_continue, {"trade": "trade", END: END}
+        # )
 
         ###############추가할 엣지를 여기에 작성해주세요.##############
 
@@ -56,10 +63,26 @@ class TradeGraph(GraphBuilder):
     def get_edges(self) -> list[tuple[str, str]]:
         return self._builder.edges()
 
-    def invoke(self, input: dict[str, any]):
+    async def invoke(self, room_id: str, user_id: str, input: str):
+        state: TradeState = {
+            "processed": [],
+            "room_id": room_id,
+            "user_id": user_id,
+        }
+
+        await self.chat_service.create_chat(
+            room_id,
+            user_id,
+            CreateChatDto(
+                content=input,
+                role=ChatRole.USER,
+                agent=ChatAgent.HUMAN,
+            ),
+        )
+
         print(f"Graph input: {input}")
-        response = self.graph.invoke(input)
-        res = response["messages"][-1].content
+        response = await self.graph.ainvoke(state)
+        res = response["messages"][-1]
         print(f"Graph response: {res}")
 
-        return res
+        return res.content

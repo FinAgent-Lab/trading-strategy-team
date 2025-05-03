@@ -24,5 +24,5 @@ class TradingAgentService:
         agent = TradingAgent()
         return agent.get_response(input)
 
-    def trade_trading_agent(self, input: str):
-        return self.graph.invoke({"messages": [("user", input)]})
+    async def chat_trade_agent(self, room_id: str, user_id: str, input: str):
+        return await self.graph.invoke(room_id, user_id, input)

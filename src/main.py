@@ -1,14 +1,40 @@
+from contextlib import asynccontextmanager
 import os
 from pydantic import BaseModel
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.config import Global
-from src.controllers.index import index_router
 from src.agents.ideaAgent.ideaAgent import IdeaAgent
+from src.databases.db import prisma
+from src.controllers.index import index_router
 
 Global.validate_env()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await prisma.connect()
+    print("✅ Prisma Connected")
+    yield
+    await prisma.disconnect()
+    print("❌ Prisma Disconnected")
+
+
 app = FastAPI(
     docs_url="/api-docs",
+    lifespan=lifespan,
+)
+
+origins = [
+    "*",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # app에 미리 만들어둔 index_router를 붙이는 것.
@@ -16,8 +42,10 @@ app = FastAPI(
 
 ideaAgent = IdeaAgent()
 
+app.include_router(index_router)
+
 @app.get("/")
-def read_root():
+def health_check():
     return {"message": "Hello World"}
 
 @app.post("/idea/test")

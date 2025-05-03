@@ -1,6 +1,9 @@
 import json
+from fastapi import HTTPException
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import Tool
+from src.dtos.chat.chatDto import CreateChatDto
+from src.services.chat import ChatService
 from src.agents.tradeAgent.state import TradeState
 from src.config import Global
 from src.utils.baseNode import BaseNode
@@ -12,11 +15,19 @@ from src.agents.tools.kisTool import (
     book_overseas_stock_order,
     cancel_overseas_stock_order,
     get_overseas_stock_order_resv_list,
+    get_access_token,
+    update_access_token,
 )
+from src.utils.functions.convertChatToPrompt import convertChatToPrompt
+from src.utils.types.ChatType import ChatAgent, ChatRole
 
 
 class TradeNode(BaseNode):
+    chat_service: ChatService
+
     def __init__(self, llm: ChatOpenAI | None = None):
+        self.chat_service = ChatService()
+
         self.llm = (
             lambda: (
                 llm
@@ -29,85 +40,223 @@ class TradeNode(BaseNode):
         )()
         self.system_prompt = "\n".join(
             [
-                "You have to figure out the intentions of the user's speech, select the appropriate tool, and execute it. If you decide that you don't need to run the tool anymore, please return the appropriate response to the user based on the result.",
-                "Don't transform the result of the tool calling.",
-                "If you don't need to run a tool, response to the user.",
-                "Every Tool call is a separate action. If you need to run a tool, you need to run it in the order of the tool call.",
-                "If you execute a tool, you need to return the result of the tool to the user or to run another tool.",
-                "Don't use the same tool multiple times.",
-                "Think one more time before you execute a tool.",
+                "Please respond in the same language as the user's input.",
+                "You are a trading assistant AI. Your job is to understand the user's intent, decide if any tool should be executed, and respond accordingly.",
+                "If a tool call is needed, call the appropriate tool with accurate arguments. Then, based on the result of the tool, either:",
+                "- Return a final answer to the user, or",
+                "- Decide if another tool should be called.",
+                "You must never transform the tool result. Just forward the result or decide what to do next.",
+                "Never call the same tool more than once. Always think twice before calling a tool.",
+                "If you plan to call a tool, but some required arguments are missing:",
+                "- First, check if the missing values can be obtained by calling another available tool.",
+                "- If possible, call the necessary tool to obtain the missing values first, before asking the user.",
+                "- Only if no tool can provide the missing values, you MUST ask the user for those missing values in the assistant's content message.",
+                "Think one more time before calling a tool.",
+                # "If you plan to execute a tool and all required arguments are present, DO NOT include any message in the assistant's content. Just return the tool call.",
+                # "If you plan to execute a tool and some required arguments are missing, you MUST ask the user for those missing values in the assistant's content message.",
             ]
         )
-        self.prompt_template = ChatPromptTemplate.from_messages(
-            [("system", self.system_prompt), ("human", "{messages}")]
-        )
+        # self.prompt_template = ChatPromptTemplate.from_messages(
+        #     [("system", self.system_prompt), ("human", "{messages}")]
+        # )
+
         self.tools = [
+            Tool(
+                name=update_access_token.name,
+                description=update_access_token.__doc__,
+                func=update_access_token,
+                coroutine=update_access_token.arun,
+                args_schema=update_access_token.args_schema,
+            ),
             Tool(
                 name=get_overseas_stock_daily_price.name,
                 description=get_overseas_stock_daily_price.__doc__,
                 func=get_overseas_stock_daily_price,
-                args_schema=get_overseas_stock_daily_price.args_schema.model_json_schema(),
+                coroutine=get_overseas_stock_daily_price.arun,
+                args_schema=get_overseas_stock_daily_price.args_schema,
             ),
             Tool(
-                name="order_overseas_stock",
+                name=order_overseas_stock.name,
                 description=order_overseas_stock.__doc__,
                 func=order_overseas_stock,
-                args_schema=order_overseas_stock.args_schema.model_json_schema(),
+                coroutine=order_overseas_stock.arun,
+                args_schema=order_overseas_stock.args_schema,
             ),
             Tool(
-                name="book_overseas_stock_order",
+                name=book_overseas_stock_order.name,
                 description=book_overseas_stock_order.__doc__,
                 func=book_overseas_stock_order,
-                args_schema=book_overseas_stock_order.args_schema.model_json_schema(),
+                coroutine=book_overseas_stock_order.arun,
+                args_schema=book_overseas_stock_order.args_schema,
             ),
             Tool(
-                name="cancel_overseas_stock_order",
+                name=cancel_overseas_stock_order.name,
                 description=cancel_overseas_stock_order.__doc__,
                 func=cancel_overseas_stock_order,
-                args_schema=cancel_overseas_stock_order.args_schema.model_json_schema(),
+                coroutine=cancel_overseas_stock_order.arun,
+                args_schema=cancel_overseas_stock_order.args_schema,
             ),
             Tool(
-                name="get_overseas_stock_order_resv_list",
+                name=get_overseas_stock_order_resv_list.name,
                 description=get_overseas_stock_order_resv_list.__doc__,
                 func=get_overseas_stock_order_resv_list,
-                args_schema=get_overseas_stock_order_resv_list.args_schema.model_json_schema(),
+                coroutine=get_overseas_stock_order_resv_list.arun,
+                args_schema=get_overseas_stock_order_resv_list.args_schema,
             ),
         ]
 
         self.llm_with_tools = self.llm.bind_tools(self.tools)
 
-    def invoke(self, state: TradeState):
-        prompt = [{"role": "system", "content": self.system_prompt}] + state["messages"]
+    async def invoke(self, state: TradeState):
+        room_id = state["room_id"]
+        user_id = state["user_id"]
 
-        messages = self.llm_with_tools.invoke(prompt)
+        chats = await self.chat_service.get_chat_list(room_id)
+
+        history = convertChatToPrompt(chats["chats"])
+
+        # print history
+        print("--------------------------------history--------------------------------")
+
+        for h in history:
+            print(f"{h['role']}: {h['content']}")
+        print("-----------------------------------------------------------------------")
+
+        prompt = [
+            {
+                "role": "system",
+                "content": "".join(
+                    [
+                        self.system_prompt,
+                        "\n\n",
+                        f"The user_id is {user_id}, room_id is {room_id}",
+                    ]
+                ),
+            }
+        ] + history
+
+        messages = await self.llm_with_tools.ainvoke(prompt)
 
         print("\n\n----------------------messages-------------------------")
         print(messages)
         print("------------------------------------------------------\n\n")
-        if len(messages.tool_calls) > 0:
-            res = self.execute_tool_call(messages.tool_calls[0])
 
-            print("---------------res--------------")
-            print(res)
-            print("--------------------------------")
+        tool_call_results: list = []
 
-            return {
-                "messages": [json.dumps(res)],
-                "processed": [
-                    json.dumps({"tool_call": messages.tool_calls[0]["name"]})
-                ],
-            }
+        for tool_call in messages.tool_calls:
+            # 발화로부터 인자 정보를 충분히 못 얻었을 경우 다시 물어보기 위한 로직
+            if messages.content.strip() != "":
+                print(f"save chat for tool call: {messages.content}")
 
-        print("content")
-        return {"messages": [messages.content], "processed": ["content"]}
+                await self.chat_service.create_chat(
+                    room_id,
+                    user_id,
+                    CreateChatDto(
+                        content=messages.content,
+                        role=ChatRole.ASSISTANT,
+                        agent=ChatAgent.TRADE,
+                    ),
+                )
 
-    def execute_tool_call(self, tool_call: ToolCall) -> str:
+                return {"messages": [messages.content]}
+            try:
+                state["messages"].append(
+                    {
+                        "role": "assistant",
+                        "content": messages.model_dump_json(),
+                    }
+                )
+
+                res = await self.execute_tool_call(tool_call)
+
+                print("---------------res--------------")
+                print(res)
+                print("--------------------------------")
+
+                tool_call_results.append(json.dumps(res))
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=e.__str__())
+                # print("error")
+                # print(e.__str__())
+                # error_message = await self.llm.ainvoke(
+                #     state["messages"]
+                #     + [
+                #         {
+                #             "role": "system",
+                #             "content": "".join(
+                #                 [
+                #                     "Please modify this message clearly and deliver it to the user.",
+                #                     "You must respond in the same language as the user's input.(Normally Korean)",
+                #                     "The message is: ",
+                #                     e.__str__(),
+                #                 ]
+                #             ),
+                #         },
+                #     ]
+                # )
+                # return {"messages": [error_message.content]}
+
+        # 툴 호출 결과가 있을 경우, 응답을 가공해서 response
+        if len(tool_call_results) > 0:
+            tool_messages = await self.llm_with_tools.ainvoke(
+                state["messages"]
+                + [
+                    {
+                        "role": "assistant",
+                        "content": "\n".join(tool_call_results),
+                    }
+                ]
+                + [
+                    {
+                        "role": "user",
+                        "content": "Please analyze the tool call results and provide a final answer to the user.",
+                    }
+                ]
+            )
+            print(f"save chat for tool call result: {tool_messages.content}")
+
+            await self.chat_service.create_chat(
+                room_id,
+                user_id,
+                CreateChatDto(
+                    content=tool_messages.content,
+                    role=ChatRole.ASSISTANT,
+                    agent=ChatAgent.TRADE,
+                ),
+            )
+
+            return {"messages": [tool_messages.content]}
+
+        print(f"save chat: {messages.content}")
+
+        await self.chat_service.create_chat(
+            room_id,
+            user_id,
+            CreateChatDto(
+                content=messages.content,
+                role=ChatRole.ASSISTANT,
+                agent=ChatAgent.TRADE,
+            ),
+        )
+
+        return {"messages": [messages.content]}
+
+    async def execute_tool_call(self, tool_call: ToolCall):
         tool_name = tool_call["name"]
         tool_input = tool_call["args"]
         tool = next((t for t in self.tools if t.name == tool_name), None)
+
         if tool:
             print("\n\n=====================tool_input========================")
+            print(tool_name)
             print(tool_input)
             print("=======================================================\n\n")
-            return tool.func(tool_input)  # 핵심...!(?)
+
+            validated_args = tool.args_schema.model_validate(tool_input)
+
+            # print("validated_args")
+            # print(validated_args.model_dump())
+
+            return await tool.coroutine(validated_args.model_dump())  # 핵심...!(?)
+
         return "Tool not found"
