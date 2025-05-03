@@ -1,7 +1,6 @@
 from typing import TypedDict, Annotated
 from langgraph.graph import add_messages
 
-
 class TradeState(TypedDict):
     room_id: str
     user_id: str

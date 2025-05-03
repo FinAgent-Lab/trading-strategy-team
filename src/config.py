@@ -10,6 +10,9 @@ class Global:
         OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY")
         KIS_APP_KEY: str = os.getenv("KIS_APP_KEY")
         KIS_SECRET_KEY: str = os.getenv("KIS_SECRET_KEY")
+
+        TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY")
+
         JWT_SECRET: str = os.getenv("JWT_SECRET")
 
     @classmethod
@@ -23,6 +26,9 @@ class Global:
             OPENAI_API_KEY: str = Field(..., min_length=1, description="OpenAI API 키")
             KIS_APP_KEY: str = Field(..., min_length=1, description="KIS 앱 키")
             KIS_SECRET_KEY: str = Field(..., min_length=1, description="KIS 시크릿 키")
+
+            TAVILY_API_KEY: str = Field(..., min_length=1, description="Tavily API 키")
+
             JWT_SECRET: str = Field(..., min_length=1, description="JWT 시크릿 키")
 
         try:
@@ -31,6 +37,7 @@ class Global:
                 OPENAI_API_KEY=cls.env.OPENAI_API_KEY,
                 KIS_APP_KEY=cls.env.KIS_APP_KEY,
                 KIS_SECRET_KEY=cls.env.KIS_SECRET_KEY,
+                TAVILY_API_KEY=cls.env.TAVILY_API_KEY,
                 JWT_SECRET=cls.env.JWT_SECRET,
             )
         except Exception as e:
