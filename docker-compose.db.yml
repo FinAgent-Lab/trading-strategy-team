@@ -1,19 +1,6 @@
 version: "3.8"
 
 services:
-  app:
-    build:
-      context: .
-    container_name: trading-server
-    ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
-    environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
-    env_file:
-      - .env
-
   postgres:
     image: pgvector/pgvector:pg17
     container_name: trading-pgvector

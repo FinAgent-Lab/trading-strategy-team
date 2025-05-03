@@ -1,0 +1,44 @@
+model User {
+  id       String @id @db.Uuid
+  name     String @db.VarChar
+  email    String @unique @db.VarChar
+  password String @db.VarChar
+
+  created_at  DateTime      @db.Timestamptz()
+  updated_at  DateTime      @updatedAt @db.Timestamptz()
+  deleted_at  DateTime?     @db.Timestamptz()
+  UserSecret  UserSecret[]
+  UserAccount UserAccount[]
+  Room        Room[]
+  Chat        Chat[]
+}
+
+model UserSecret {
+  id      String @id @db.Uuid
+  user_id String @db.Uuid
+  value   String @db.VarChar
+  key     String @db.VarChar
+
+  created_at DateTime  @db.Timestamptz()
+  updated_at DateTime  @updatedAt @db.Timestamptz()
+  deleted_at DateTime? @db.Timestamptz()
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@unique([key, user_id])
+}
+
+model UserAccount {
+  id       String @id @db.Uuid
+  user_id  String @db.Uuid
+  account  String @db.VarChar
+  provider String @db.VarChar
+
+  created_at DateTime  @db.Timestamptz()
+  updated_at DateTime  @updatedAt @db.Timestamptz()
+  deleted_at DateTime? @db.Timestamptz()
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@unique([provider, account])
+}

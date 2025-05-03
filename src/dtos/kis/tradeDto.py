@@ -103,7 +103,8 @@ class TradeNestedDto(BaseModel):
 
 class TradeDto:
     class GetOverseasStockDailyPriceInput(BaseModel):
-        access_token: str = Field(..., description="""Access token for KIS API.""")
+        user_id: str
+
         AUTH: str = Field(
             default="",
             description="Information of user authorization. AUTH is always an empty string",
@@ -152,17 +153,20 @@ class TradeDto:
         )
 
     class OrderOverseasStockInput(BaseModel):
-        access_token: str = Field(
+        user_id: str = Field(
             ...,
-            description="""Access token for KIS API.
-                                  For example, 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0b2tlbiIsImF1ZCI6IjNiZTYxMjhmLTFkNzktNDYzMC1iMTViLTVjOWY3NzhmY2EzMiIsInByZHRfY2QiOiIiLCJpc3MiOiJ1bm9ndyIsImV4cCI6MTc0MzkwMjYwMSwiaWF0IjoxNzQzODE2MjAxLCJqdGkiOiJQU2xEb2UybzhaTjVXZkZoRks1Qm54NTRjQ3VHYkUzaTQySEgifQ.yzryecxe_kfnTxrBv8ebbHRttdcFS7EmTt__htIB8OAHtK3qYYZcFSyjrXh7_nA7wn9v3jQpPGQ4fWQeFerWKg'""",
+            description="""user_id is the user's id.""",
         )
-        CANO: str = Field(
+        is_buy: bool = Field(
             ...,
-            min_length=8,
-            max_length=8,
-            description="""CANO is the combined account number. The first 8 digits of the account number.""",
-        )  # 종합계좌번호. 계좌번호 앞 8자리
+            description="""is_buy is the order type. True: buy, False: sell""",
+        )
+        # CANO: str = Field(
+        #     ...,
+        #     min_length=8,
+        #     max_length=8,
+        #     description="""CANO is the combined account number. The first 8 digits of the account number.""",
+        # )  # 종합계좌번호. 계좌번호 앞 8자리
         ACNT_PRDT_CD: str = Field(
             default="01",
             min_length=2,
@@ -170,8 +174,7 @@ class TradeDto:
             description="""ACNT_PRDT_CD is the account product code. The last 2 digits of the account number. 01: domestic, overseas stocks / 03: domestic futures / 08: overseas futures""",
         )  # 계좌상품코드. 계좌번호 뒤 2자리. 01: 국내, 해외주식 / 03: 국내선물 / 08: 해외선물
         OVRS_EXCG_CD: Optional[str] = Field(
-            default=None,
-            max_length=4,
+            default="NASD",
             description="""OVRS_EXCG_CD is the overseas exchange code. NASD: Nasdaq / NYSE: New York Stock Exchange / AMEX: American Stock Exchange""",
         )  # 해외거래소 코드
         PDNO: str = Field(
@@ -184,11 +187,12 @@ class TradeDto:
             description="""ORD_QTY is the order quantity.""",
         )  # 주문수량
         OVRS_ORD_UNPR: str = Field(
-            ...,
-            description="""OVRS_ORD_UNPR is the overseas order unit price (1 share price). Please check the minimum order quantity and order unit for each overseas exchange.""",
+            default="0",
+            description="""OVRS_ORD_UNPR is the overseas order unit price (1 share price). Please check the minimum order quantity and order unit for each overseas exchange. If the order is market price, please set 0.""",
         )  # 해외주문단가 (1주당 가격. 해외거래소 별 최소 주문수량 및 주문단위 확인 필요). 시장가의 경우 0으로 설정
         ORD_SVR_DVSN_CD: str = Field(
             default="0",
+            description="""This field is always 0.""",
         )  # 주문서버구분코드 ("0" 으로 설정)
         ORD_DVSN: Optional[str] = Field(
             ...,
@@ -198,7 +202,7 @@ class TradeDto:
             ### [Header tr_id TTTT1002U(US Buy Order)]
             00 : Limit Price
             32 : LOO(Limit On Open)
-            34 : LOC(Limit On Close) 
+            34 : LOC(Limit On Close)
             * For mock investment VTTT1002U(US Buy Order), only 00:Limit Price is available
 
             ### [Header tr_id TTTT1006U(US Sell Order)]
@@ -262,13 +266,21 @@ class TradeDto:
         )
 
     class BookOverseasStockOrderInput(BaseModel):
-        access_token: str = Field(..., description="""Access token for KIS API.""")
-        CANO: str = Field(
+        user_id: str = Field(
             ...,
-            min_length=8,
-            max_length=8,
-            description="""CANO is the combined account number. The first 8 digits of the account number.""",
-        )  # 종합계좌번호. 계좌번호 앞 8자리
+            description="""user_id is the user's id.""",
+        )
+        is_buy: bool = Field(
+            ...,
+            description="""is_buy is the order type. True: buy, False: sell""",
+        )
+
+        # CANO: str = Field(
+        #     ...,
+        #     min_length=8,
+        #     max_length=8,
+        #     description="""CANO is the combined account number. The first 8 digits of the account number.""",
+        # )  # 종합계좌번호. 계좌번호 앞 8자리
         ACNT_PRDT_CD: str = Field(
             ...,
             min_length=2,
@@ -300,6 +312,14 @@ class TradeDto:
         # ORD_DVSN: str  # tr_id가 TTTT3016U(미국 예약 매도 주문)인 경우만 사용. 00: 지정가, 31: MOO(장개시시장가)
 
     class BookOverseasStockOrderOutput(BaseModel):
+        user_id: str = Field(
+            ...,
+            description="""user_id is the user's id.""",
+        )
+        is_buy: bool = Field(
+            ...,
+            description="""is_buy is the order type. True: buy, False: sell""",
+        )
         rt_cd: str = Field(
             ...,
             min_length=1,
@@ -317,10 +337,13 @@ class TradeDto:
         )
 
     class CancelOverseasStockOrderInput(BaseModel):
-        access_token: str = Field(..., description="""Access token for KIS API.""")
-        CANO: str = Field(
-            ..., min_length=8, max_length=8
-        )  # 종합계좌번호. 계좌번호 앞 8자리
+        user_id: str = Field(
+            ...,
+            description="""user_id is the user's id.""",
+        )
+        # CANO: str = Field(
+        #     ..., min_length=8, max_length=8
+        # )  # 종합계좌번호. 계좌번호 앞 8자리
         ACNT_PRDT_CD: str = Field(
             ..., min_length=2, max_length=2
         )  # 계좌상품코드. 계좌번호 뒤 2자리. 01: 국내, 해외주식 / 03: 국내선물 / 08: 해외선물
@@ -332,10 +355,13 @@ class TradeDto:
         )  # 해외예약주문번호
 
     class GetOverseasStockOrderResvListInput(BaseModel):
-        access_token: str = Field(..., description="""Access token for KIS API.""")
-        CANO: str = Field(
-            ..., min_length=8, max_length=8
-        )  # 종합계좌번호. 계좌번호 앞 8자리
+        user_id: str = Field(
+            ...,
+            description="""user_id is the user's id.""",
+        )
+        # CANO: str = Field(
+        #     ..., min_length=8, max_length=8
+        # )  # 종합계좌번호. 계좌번호 앞 8자리
         ACNT_PRDT_CD: str = Field(
             ..., min_length=2, max_length=2
         )  # 계좌상품코드. 계좌번호 뒤 2자리. 01: 국내, 해외주식 / 03: 국내선물 / 08: 해외선물

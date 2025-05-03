@@ -20,8 +20,11 @@ yfinance = "^0.2.55"
 matplotlib = "^3.10.1"
 lxml = "^5.3.2"
 lark = "^1.2.2"
-pandas-ta = {git = "https://github.com/twopirllc/pandas-ta.git", rev = "main"}
 langchain-experimental = "^0.3.4"
+prisma = "^0.15.0"
+pydantic = {extras = ["email"], version = "^2.11.3"}
+bcrypt = "^4.3.0"
+python-jose = "^3.4.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
