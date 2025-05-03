@@ -8,7 +8,7 @@ body:
     attributes:
       label: 사용 환경
       description: 사용한 OS, Node 버전, 브라우저 등
-      placeholder: 예: macOS, Node.js v18, Chrome
+      placeholder: macOS, Node.js v18, Chrome
     validations:
       required: true
 
