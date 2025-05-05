@@ -1,7 +1,6 @@
 from typing import TypedDict, Annotated
 from langgraph.graph import add_messages
 
-
 class HypothesisDict(TypedDict):
     hypothesis: str
     confidence: float

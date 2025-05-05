@@ -7,27 +7,50 @@ import json
 
 class IdeaNode(BaseNode):
     def __init__(self, llm: ChatOpenAI | None = None):
+        
         self.llm = (
             llm if llm else ChatOpenAI(
                 model="gpt-4o-mini",
                 api_key=Global.env.OPENAI_API_KEY,
             )
         )
+        
         self.system_prompt = "\n".join([
             "당신은 시장 가설을 체계적으로 생성하는 전문가입니다.",
-            "입력된 여러 종목(symbol) 각각에 대해 다음 형식으로 가설을 생성해야 합니다.",
+            "입력된 여러 종목(symbol) 각각에 대해 총 3개의 가설을 생성해야 합니다.",
             "물어본 종목에 대해서만 대답해주세요.",
-            "",
+            "종목은 팔란티어, TSMC, NVIDIA, IBM에 대한 것만 주세요.",
+            "각 종목별 종목명은 다음과 같습니다: 팔란티어-PLTR, TSMC-TSM, NVIDIA-NVDA, IBM-IBM",
             "반드시 다음과 같은 JSON 포맷을 따르세요:",
             '{\n'
-            '  "SYMBOL1": {\n'
-            '    "hypothesis": "SYMBOL1에 대한 가설",\n'
-            '    "confidence": 0.00\n'
-            '  },\n'
-            '  "SYMBOL2": {\n'
-            '    "hypothesis": "SYMBOL2에 대한 가설",\n'
-            '    "confidence": 0.00\n'
-            '  }\n'
+            '  "SYMBOL1": [\n'
+            '    {\n'
+            '      "hypothesis": "SYMBOL1에 대한 가설 1",\n'
+            '      "confidence": 0.00\n'
+            '    },\n'
+            '    {\n'
+            '      "hypothesis": "SYMBOL1에 대한 가설 2",\n'
+            '      "confidence": 0.00\n'
+            '    },\n'
+            '    {\n'
+            '      "hypothesis": "SYMBOL1에 대한 가설 3",\n'
+            '      "confidence": 0.00\n'
+            '    }\n'
+            '  ],\n'
+            '  "SYMBOL2": [\n'
+            '    {\n'
+            '      "hypothesis": "SYMBOL2에 대한 가설 1",\n'
+            '      "confidence": 0.00\n'
+            '    },\n'
+            '    {\n'
+            '      "hypothesis": "SYMBOL2에 대한 가설 2",\n'
+            '      "confidence": 0.00\n'
+            '    },\n'
+            '    {\n'
+            '      "hypothesis": "SYMBOL2에 대한 가설 3",\n'
+            '      "confidence": 0.00\n'
+            '    }\n'
+            '  ]\n'
             '}',
             "",
             "추가적인 설명 없이 JSON만 반환해야 합니다.",
@@ -38,7 +61,7 @@ class IdeaNode(BaseNode):
             ("human", "{messages}")
         ])
 
-    def invoke(self, state: IdeaState) -> IdeaState:
+    async def invoke(self, state: IdeaState) -> IdeaState:
         prompt = [{"role": "system", "content": self.system_prompt}]
         
         if isinstance(state["messages"], list):
@@ -51,7 +74,7 @@ class IdeaNode(BaseNode):
         else:
             prompt.append({"role": "user", "content": state["messages"]})
 
-        messages = self.llm.invoke(prompt)
+        messages = await self.llm.ainvoke(prompt)
 
         try:
             hypotheses = json.loads(messages.content)

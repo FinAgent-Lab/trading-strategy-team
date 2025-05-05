@@ -49,8 +49,8 @@ def health_check():
     return {"message": "Hello World"}
 
 @app.post("/idea/test")
-def read_idea():
-    return ideaAgent.test()
+async def read_idea():
+    return await ideaAgent.test()
 
 class IdeaRequest(BaseModel):
     messages: str

@@ -49,8 +49,8 @@ class IdeaGraph:
     def get_edges(self) -> list[tuple[str, str]]:
         return self._builder.edges()
 
-    def invoke(self, input: dict[str, any]):
+    async def invoke(self, input: dict[str, any]):
         print(f"Graph input: {input}")
-        response = self.graph.invoke(input)
+        response = await self.graph.ainvoke(input)
         print(f"Graph response: {response}")
         return response.get("hypotheses", {})
