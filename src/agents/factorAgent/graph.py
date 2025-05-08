@@ -18,11 +18,16 @@ def factor_agent_graph(llm):
     graph.add_node("generate_ast", factor_node.generate_ast)
     graph.add_node("execute_code", factor_node.execute_code)
     graph.add_node("final_output", factor_node.final_output)
+    graph.add_node("rebalance_value", factor_node.rebalance_value)
+    graph.add_node("rebalance_shares", factor_node.rebalance_shares)
+    
 
     graph.add_edge(START, "generate_ast")
     graph.add_edge("generate_ast", "execute_code")
     graph.add_edge("execute_code", "final_output")
-    graph.add_edge("final_output", END)
+    graph.add_edge("final_output", "rebalance_value")
+    graph.add_edge("rebalance_value", "rebalance_shares")
+    graph.add_edge("rebalance_shares", END)
 
     factor_agent_graph = graph.compile()
 
