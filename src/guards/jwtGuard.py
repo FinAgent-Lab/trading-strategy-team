@@ -10,15 +10,15 @@ bearer_docs = APIKeyHeader(name="authorization", scheme_name="Bearer")
 def jwt_guard(
     credentials: Annotated[str, Depends(bearer_docs)],
 ):
-    token = credentials
     jwt_service = JwtService()
     # if access_token is None:
     #     raise HTTPException(status_code=401, detail="Unauthorized")
 
-    # [bearer, token] = access_token.split(" ")
+    bearer = credentials.split(" ")[0]
+    token = credentials.split(" ")[1]
 
-    # if bearer != "Bearer":
-    #     raise HTTPException(status_code=401, detail="Unauthorized")
+    if bearer != "Bearer":
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
         payload = jwt_service.decode(token, Global.env.JWT_SECRET, "HS256")
