@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Path
 from src.dtos.kis.tradeDto import TradeDto
 from src.services.kis import KisService
 
-kis_router = router = APIRouter(prefix="/kis")
+kis_router = router = APIRouter()
 
 
 @router.get("/access-token/{user_id}")

@@ -1,7 +1,8 @@
-from src.agents.chartAnalysisAgent.node import ChartAnalysisAgent
+from src.agents.chartAnalysis.node import ChartAnalysisAgent
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class ChartAnalysisService:
     _instance = None

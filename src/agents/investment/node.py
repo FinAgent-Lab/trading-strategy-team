@@ -4,10 +4,9 @@ from langchain_openai import ChatOpenAI
 from langchain_core.tools import Tool
 from src.dtos.chat.chatDto import CreateChatDto
 from src.services.chat import ChatService
-from src.agents.tradeAgent.state import TradeState
+from src.agents.investment.state import InvestmentState
 from src.config import Global
 from src.utils.baseNode import BaseNode
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import ToolCall
 from src.agents.tools.kisTool import (
     get_overseas_stock_daily_price,
@@ -15,14 +14,13 @@ from src.agents.tools.kisTool import (
     book_overseas_stock_order,
     cancel_overseas_stock_order,
     get_overseas_stock_order_resv_list,
-    get_access_token,
     update_access_token,
 )
 from src.utils.functions.convertChatToPrompt import convertChatToPrompt
 from src.utils.types.ChatType import ChatAgent, ChatRole
 
 
-class TradeNode(BaseNode):
+class InvestmentNode(BaseNode):
     chat_service: ChatService
 
     def __init__(self, llm: ChatOpenAI | None = None):
@@ -68,13 +66,13 @@ class TradeNode(BaseNode):
                 coroutine=update_access_token.arun,
                 args_schema=update_access_token.args_schema,
             ),
-            Tool(
-                name=get_overseas_stock_daily_price.name,
-                description=get_overseas_stock_daily_price.__doc__,
-                func=get_overseas_stock_daily_price,
-                coroutine=get_overseas_stock_daily_price.arun,
-                args_schema=get_overseas_stock_daily_price.args_schema,
-            ),
+            # Tool(
+            #     name=get_overseas_stock_daily_price.name,
+            #     description=get_overseas_stock_daily_price.__doc__,
+            #     func=get_overseas_stock_daily_price,
+            #     coroutine=get_overseas_stock_daily_price.arun,
+            #     args_schema=get_overseas_stock_daily_price.args_schema,
+            # ),
             Tool(
                 name=order_overseas_stock.name,
                 description=order_overseas_stock.__doc__,
@@ -82,34 +80,34 @@ class TradeNode(BaseNode):
                 coroutine=order_overseas_stock.arun,
                 args_schema=order_overseas_stock.args_schema,
             ),
-            Tool(
-                name=book_overseas_stock_order.name,
-                description=book_overseas_stock_order.__doc__,
-                func=book_overseas_stock_order,
-                coroutine=book_overseas_stock_order.arun,
-                args_schema=book_overseas_stock_order.args_schema,
-            ),
-            Tool(
-                name=cancel_overseas_stock_order.name,
-                description=cancel_overseas_stock_order.__doc__,
-                func=cancel_overseas_stock_order,
-                coroutine=cancel_overseas_stock_order.arun,
-                args_schema=cancel_overseas_stock_order.args_schema,
-            ),
-            Tool(
-                name=get_overseas_stock_order_resv_list.name,
-                description=get_overseas_stock_order_resv_list.__doc__,
-                func=get_overseas_stock_order_resv_list,
-                coroutine=get_overseas_stock_order_resv_list.arun,
-                args_schema=get_overseas_stock_order_resv_list.args_schema,
-            ),
+            # Tool(
+            #     name=book_overseas_stock_order.name,
+            #     description=book_overseas_stock_order.__doc__,
+            #     func=book_overseas_stock_order,
+            #     coroutine=book_overseas_stock_order.arun,
+            #     args_schema=book_overseas_stock_order.args_schema,
+            # ),
+            # Tool(
+            #     name=cancel_overseas_stock_order.name,
+            #     description=cancel_overseas_stock_order.__doc__,
+            #     func=cancel_overseas_stock_order,
+            #     coroutine=cancel_overseas_stock_order.arun,
+            #     args_schema=cancel_overseas_stock_order.args_schema,
+            # ),
+            # Tool(
+            #     name=get_overseas_stock_order_resv_list.name,
+            #     description=get_overseas_stock_order_resv_list.__doc__,
+            #     func=get_overseas_stock_order_resv_list,
+            #     coroutine=get_overseas_stock_order_resv_list.arun,
+            #     args_schema=get_overseas_stock_order_resv_list.args_schema,
+            # ),
         ]
 
         self.llm_with_tools = self.llm.bind_tools(self.tools)
 
-    async def invoke(self, state: TradeState):
-        room_id = state["room_id"]
-        user_id = state["user_id"]
+    async def invoke(self, state: InvestmentState):
+        room_id = state["common"]["room"]["id"]
+        user_id = state["common"]["user"]["id"]
 
         chats = await self.chat_service.get_chat_list(room_id)
 
@@ -154,13 +152,20 @@ class TradeNode(BaseNode):
                     CreateChatDto(
                         content=messages.content,
                         role=ChatRole.ASSISTANT,
-                        agent=ChatAgent.TRADE,
+                        agent=ChatAgent.INVESTMENT,
                     ),
                 )
 
-                return {"messages": [messages.content]}
+                state["common"]["messages"].append(
+                    {
+                        "role": "assistant",
+                        "content": messages.content,
+                    }
+                )
+
+                return state
             try:
-                state["messages"].append(
+                state["common"]["messages"].append(
                     {
                         "role": "assistant",
                         "content": messages.model_dump_json(),
@@ -199,7 +204,7 @@ class TradeNode(BaseNode):
         # 툴 호출 결과가 있을 경우, 응답을 가공해서 response
         if len(tool_call_results) > 0:
             tool_messages = await self.llm_with_tools.ainvoke(
-                state["messages"]
+                state["common"]["messages"]
                 + [
                     {
                         "role": "assistant",
@@ -221,11 +226,18 @@ class TradeNode(BaseNode):
                 CreateChatDto(
                     content=tool_messages.content,
                     role=ChatRole.ASSISTANT,
-                    agent=ChatAgent.TRADE,
+                    agent=ChatAgent.INVESTMENT,
                 ),
             )
 
-            return {"messages": [tool_messages.content]}
+            state["common"]["messages"].append(
+                {
+                    "role": "assistant",
+                    "content": tool_messages.content,
+                }
+            )
+
+            return state
 
         print(f"save chat: {messages.content}")
 
@@ -235,28 +247,39 @@ class TradeNode(BaseNode):
             CreateChatDto(
                 content=messages.content,
                 role=ChatRole.ASSISTANT,
-                agent=ChatAgent.TRADE,
+                agent=ChatAgent.INVESTMENT,
             ),
         )
 
-        return {"messages": [messages.content]}
+        state["common"]["messages"].append(
+            {
+                "role": "assistant",
+                "content": messages.content,
+            }
+        )
+
+        return state
 
     async def execute_tool_call(self, tool_call: ToolCall):
         tool_name = tool_call["name"]
         tool_input = tool_call["args"]
         tool = next((t for t in self.tools if t.name == tool_name), None)
 
-        if tool:
-            print("\n\n=====================tool_input========================")
-            print(tool_name)
-            print(tool_input)
-            print("=======================================================\n\n")
+        try:
+            if tool:
+                print("\n\n=====================tool_input========================")
+                print(tool_name)
+                print(tool_input)
+                print("=======================================================\n\n")
 
-            validated_args = tool.args_schema.model_validate(tool_input)
+                validated_args = tool.args_schema.model_validate(tool_input)
 
-            # print("validated_args")
-            # print(validated_args.model_dump())
+                print("validated_args")
+                print(validated_args.model_dump())
 
-            return await tool.coroutine(validated_args.model_dump())  # 핵심...!(?)
+                return await tool.coroutine(validated_args.model_dump())  # 핵심...!(?)
+        except Exception as e:
+            print(e.__str__())
+            raise HTTPException(status_code=400, detail=e.__str__())
 
         return "Tool not found"
