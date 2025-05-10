@@ -1,17 +1,18 @@
 import json
+from fastapi import HTTPException
 import pandas as pd
 import matplotlib.pyplot as plt
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import Tool
 from langchain.schema import SystemMessage, HumanMessage
 from src.config import Global
-from src.agents.chartAnalysisAgent.state import ChartAnalysisState
+from src.agents.chartAnalysis.state import ChartAnalysisState
 from src.utils.baseNode import BaseNode
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import ToolCall
 import requests
 from src.services.kis import KisService
-from src.agents.chartAnalysisAgent.prompt import ChartAnalysisPrompt
+from src.agents.chartAnalysis.prompt import ChartAnalysisPrompt
 from typing import List
 from pydantic import BaseModel, Field
 from src.dtos.kis.tradeDto import TradeDto
@@ -29,7 +30,7 @@ class GetStockDataInput(BaseModel):
     access_token: str = Field(default="", description="접근 토큰")
 
 
-class ChartAnalysisAgent:
+class ChartAnalysisAgent(BaseNode):
     llm: ChatOpenAI
     llm_with_tools: ChatOpenAI
     system_prompt: str
@@ -56,74 +57,89 @@ class ChartAnalysisAgent:
 
         self.llm_with_tools = self.llm.bind_tools(self.tools)
 
+    def invoke():
+        pass
+
     def get_stock_data(self, input: GetStockDataInput):
         """해외 주식 일별 시세를 조회합니다."""
         # KisService에서 토큰 가져오기
         access_token = self.kis_service.get_access_token()
         input_dict = input.model_dump()
         input_dict["access_token"] = access_token
-        
+
         # KisService를 통해 데이터 가져오기
         response = self.kis_service.get_overseas_stock_daily_price(input_dict)
         return response
 
-    def analyze_chart(self, symbol: str, exchange: str) -> str:
+    async def analyze_chart(self, state: ChartAnalysisState) -> str:
         try:
-            print(f"[ChartAnalysis] 차트 분석 시작 - 심볼: {symbol}, 거래소: {exchange}")
-            
+            symbol = state["symbol"]
+            exchange = state["exchange"]
+            print(
+                f"[ChartAnalysis] 차트 분석 시작 - 심볼: {symbol}, 거래소: {exchange}"
+            )
+
             # KisService에서 access_token 가져오기
-            print("[ChartAnalysis] access_token 요청 중...")
-            access_token = self.kis_service.get_access_token()
-            print(f"[ChartAnalysis] access_token 획득 완료: {access_token[:20]}...")  # 토큰의 앞부분만 출력
-            
+            # print("[ChartAnalysis] access_token 요청 중...")
+            # access_token = self.kis_service.get_access_token()
+            # print(
+            #     f"[ChartAnalysis] access_token 획득 완료: {access_token[:20]}..."
+            # )  # 토큰의 앞부분만 출력
+            # access_token = state["common"]["user"]["access_token"]
+
             # Tool 입력 생성
             print("[ChartAnalysis] 주가 데이터 요청 준비 중...")
             tool_input = {
                 "input": {
-                    "access_token": access_token,  # 응답 전체를 access_token으로 사용
+                    # "access_token": access_token,  # 응답 전체를 access_token으로 사용
                     "AUTH": "",
                     "EXCD": exchange,
                     "SYMB": symbol,
                     "GUBN": "0",
                     "BYMD": "",
-                    "MODP": "0"
+                    "MODP": "0",
+                    "user_id": state["common"]["user"]["id"],
                 }
             }
-            print("[ChartAnalysis] 입력 데이터 구성 완료")  # 보안을 위해 전체 입력 데이터는 출력하지 않음
-            
+            print(
+                "[ChartAnalysis] 입력 데이터 구성 완료"
+            )  # 보안을 위해 전체 입력 데이터는 출력하지 않음
+
             # Tool 직접 호출
             print("[ChartAnalysis] KIS API 호출 중...")
-            result = get_overseas_stock_daily_price(tool_input)
+            result = await get_overseas_stock_daily_price(tool_input)
             print("[ChartAnalysis] KIS API 응답 수신")
-            print(f"[ChartAnalysis] 응답 데이터: {result}")
-            
-            if result.get('rt_cd') != '0':
+            # print(f"[ChartAnalysis] 응답 데이터: {result}")
+
+            if result.get("rt_cd") != "0":
                 raise Exception(f"API 오류: {result.get('msg1', '알 수 없는 오류')}")
-                
+
             # 데이터프레임 변환 및 분석
             print("[ChartAnalysis] 데이터 분석 시작...")
-            output2_list = result.get('output2', [])
+            output2_list = result.get("output2", [])
             if output2_list and len(output2_list) > 0:
                 # 모든 데이터를 리스트로 변환
                 data_list = []
                 for output2 in output2_list:
-                    date_str = output2['xymd']
+                    date_str = output2["xymd"]
                     formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
-                    
-                    data_list.append({
-                        'date': formatted_date,
-                        'close': float(output2['clos']),
-                        'open': float(output2['open']),
-                        'high': float(output2['high']),
-                        'low': float(output2['low']),
-                        'volume': int(output2['tvol'])
-                    })
-                
+
+                    data_list.append(
+                        {
+                            "date": formatted_date,
+                            "close": float(output2["clos"]),
+                            "open": float(output2["open"]),
+                            "high": float(output2["high"]),
+                            "low": float(output2["low"]),
+                            "volume": int(output2["tvol"]),
+                        }
+                    )
+
                 # 전체 데이터로 데이터프레임 생성
                 data = pd.DataFrame(data_list)
                 print(f"[ChartAnalysis] 데이터프레임 생성 완료 (총 {len(data)} 행):")
                 print(f"[ChartAnalysis] 최근 5일 데이터:\n{data.head()}")
-                
+
                 # 분석 프롬프트에도 전체 데이터 반영
                 analysis_prompt = f"""
                 {symbol} 주식의 최근 {len(data)}일간의 거래 데이터입니다:
@@ -140,17 +156,17 @@ class ChartAnalysisAgent:
                 4. 향후 가격 움직임에 대한 전망
                 """
                 print("[ChartAnalysis] 프롬프트 생성 완료")
-                
+
                 # AI 분석 수행
                 print("[ChartAnalysis] AI 분석 수행 중...")
                 analysis_result = self.llm.invoke(analysis_prompt)
                 print("[ChartAnalysis] AI 분석 완료")
-                
-                return analysis_result
+
+                return analysis_result.content
             else:
                 print("[ChartAnalysis] 오류: output2 데이터가 없습니다")
                 return "주가 데이터를 가져오는데 실패했습니다."
-            
+
         except Exception as e:
             error_msg = f"[ChartAnalysis] 오류 발생: {str(e)}"
             print(error_msg)
@@ -166,8 +182,13 @@ class ChartAnalysisAgent:
             return tool.func(input_dto)
         return "Tool not found"
 
+
 class ChartAnalysisNode(BaseNode):
+    agent: ChartAnalysisAgent
+
     def __init__(self, llm: ChatOpenAI | None = None):
+        self.agent = ChartAnalysisAgent()
+
         self.llm = (
             lambda: (
                 llm
@@ -178,24 +199,25 @@ class ChartAnalysisNode(BaseNode):
                 )
             )
         )()
-        
-        self.system_prompt = "\n".join([
-            "You are a financial analyst specialized in chart analysis.",
-            "Analyze the stock data and provide insights about:",
-            "1. Column descriptions and their significance",
-            "2. Recent price trends and patterns",
-            "3. Future predictions based on technical analysis",
-            "Use the provided tools to fetch and analyze stock data.",
-        ])
-        
-        self.prompt_template = ChatPromptTemplate.from_messages([
-            ("system", self.system_prompt),
-            ("human", "{messages}")
-        ])
+
+        self.system_prompt = "\n".join(
+            [
+                "You are a financial analyst specialized in chart analysis.",
+                "Analyze the stock data and provide insights about:",
+                "1. Column descriptions and their significance",
+                "2. Recent price trends and patterns",
+                "3. Future predictions based on technical analysis",
+                "Use the provided tools to fetch and analyze stock data.",
+            ]
+        )
+
+        self.prompt_template = ChatPromptTemplate.from_messages(
+            [("system", self.system_prompt), ("human", "{messages}")]
+        )
 
         # KIS API 설정
         self.KIS_API_URL = "https://openapi.koreainvestment.com:9443/uapi/overseas-price/v1/quotations/dailyprice"
-        
+
         # Tools 설정
         self.tools = [
             Tool(
@@ -217,44 +239,46 @@ class ChartAnalysisNode(BaseNode):
                 name="plot_chart",
                 description="Create and save a chart visualization",
                 func=self.plot_chart,
-            )
+            ),
         ]
 
         self.llm_with_tools = self.llm.bind_tools(self.tools)
 
     def fetch_stock_data(self, state: ChartAnalysisState):
         headers = {
-            "authorization": f"Bearer {state['access_token']}",
-            "appkey": Global.env.KIS_APP_KEY,
-            "appsecret": Global.env.KIS_APP_SECRET,
+            "authorization": f"Bearer {state['common']['user']['access_token']}",
+            "appkey": state["common"]["user"]["app_key"],
+            "appsecret": state["common"]["user"]["app_secret"],
             "tr_id": "HHDFS76240000",
-            "content-type": "application/json; charset=utf-8"
+            "content-type": "application/json; charset=utf-8",
         }
-        
+
         params = {
             "AUTH": "",
-            "EXCD": state['exchange'],
-            "SYMB": state['symbol'],
+            "EXCD": state["exchange"],
+            "SYMB": state["symbol"],
             "GUBN": "0",
             "BYMD": "",
-            "MODP": "0"
+            "MODP": "0",
         }
-        
+
         response = requests.get(self.KIS_API_URL, headers=headers, params=params)
-        
+
         if response.status_code == 200:
             data = response.json()
             if data["rt_cd"] == "0":
                 df = pd.DataFrame(data["output2"])
                 df["date"] = pd.to_datetime(df["xymd"], format="%Y%m%d")
-                df = df.rename(columns={
-                    "clos": "close",
-                    "open": "open",
-                    "high": "high",
-                    "low": "low",
-                    "tvol": "volume"
-                })
-                state['df'] = df[["date", "close", "open", "high", "low", "volume"]]
+                df = df.rename(
+                    columns={
+                        "clos": "close",
+                        "open": "open",
+                        "high": "high",
+                        "low": "low",
+                        "tvol": "volume",
+                    }
+                )
+                state["df"] = df[["date", "close", "open", "high", "low", "volume"]]
                 return state
             else:
                 raise Exception(f"API 응답 오류: {data['msg1']}")
@@ -271,11 +295,13 @@ class ChartAnalysisNode(BaseNode):
         - 변동성이 큰 구간 식별
         - 기술적 분석 요소 (이동평균선, 지지선, 저항선)
         """
-        response = self.llm.invoke([
-            SystemMessage(content="You are a stock market analyst."),
-            HumanMessage(content=prompt)
-        ])
-        state['chart_analysis'] = response.content
+        response = self.llm.invoke(
+            [
+                SystemMessage(content="You are a stock market analyst."),
+                HumanMessage(content=prompt),
+            ]
+        )
+        state["chart_analysis"] = response.content
         return state
 
     def predict_future(self, state: ChartAnalysisState):
@@ -288,16 +314,24 @@ class ChartAnalysisNode(BaseNode):
         - 주요 지지선/저항선
         - 투자자들에게 조언할 사항
         """
-        response = self.llm.invoke([
-            SystemMessage(content="You are a stock market forecaster."),
-            HumanMessage(content=prompt)
-        ])
-        state['future_prediction'] = response.content
+        response = self.llm.invoke(
+            [
+                SystemMessage(content="You are a stock market forecaster."),
+                HumanMessage(content=prompt),
+            ]
+        )
+        state["future_prediction"] = response.content
         return state
 
     def plot_chart(self, state: ChartAnalysisState):
         plt.figure(figsize=(10, 5))
-        plt.plot(state['df']["date"], state['df']["close"], marker="o", linestyle="-", label="종가 (Close)")
+        plt.plot(
+            state["df"]["date"],
+            state["df"]["close"],
+            marker="o",
+            linestyle="-",
+            label="종가 (Close)",
+        )
         plt.xticks(rotation=45)
         plt.title(f"{state['symbol']} 주가 차트 (30일)")
         plt.xlabel("날짜")
@@ -306,41 +340,80 @@ class ChartAnalysisNode(BaseNode):
         plt.grid(True)
         plt.savefig(f"static/charts/{state['symbol']}_chart.png")
         plt.close()
-        
-        state['chart_path'] = f"/static/charts/{state['symbol']}_chart.png"
+
+        state["chart_path"] = f"/static/charts/{state['symbol']}_chart.png"
         return state
 
-    def invoke(self, state: ChartAnalysisState):
+    async def invoke(self, state: ChartAnalysisState):
+
+        systemp_prmopt = "\n".join(
+            [
+                "You are a financial analyst specialized in extracting stock information.",
+                "Extract the stock symbol and determine the exchange code from the user's message.",
+                "- If a stock symbol is mentioned (e.g. AAPL, MSFT, GOOGL), extract it as the symbol",
+                "- For the exchange code:",
+                "  * If explicitly mentioned (e.g. NAS, NYSE, AMEX), use that value",
+                "  * If not mentioned, infer from the symbol:",
+                "    - For tech stocks (AAPL, MSFT, GOOGL, etc): use 'NAS'",
+                "    - For traditional stocks (GE, JPM, etc): use 'NYSE'",
+                "    - If cannot determine: use empty string",
+                'Return the information in the format: {"symbol": symbol, "exchange": exchange}',
+            ]
+        )
+
+        prompt = [{"role": "system", "content": systemp_prmopt}] + state["common"][
+            "messages"
+        ]
+
+        class StructuredOutput(BaseModel):
+            symbol: str = Field(..., description="The stock symbol")
+            exchange: str = Field(..., description="The stock exchange code")
+
+        response: StructuredOutput = await self.llm.with_structured_output(
+            StructuredOutput
+        ).ainvoke(prompt)
+
+        print("chart analysis invoke structured output: ", response)
+
+        if response.exchange == "" or response.symbol == "":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid Structured Output in ChartAnalysisNode: {response}",
+            )
+
+        state["exchange"] = response.exchange
+        state["symbol"] = response.symbol
+
         try:
-            # 데이터 가져오기
-            state = self.fetch_stock_data(state)
-            
-            # 차트 분석
-            state = self.analyze_chart(state)
-            
-            # 미래 예측
-            state = self.predict_future(state)
-            
-            # 차트 생성
-            state = self.plot_chart(state)
-            
-            # 결과 생성
-            result = {
-                "symbol": state['symbol'],
-                "exchange": state['exchange'],
-                "chart_analysis": state['chart_analysis'],
-                "future_prediction": state['future_prediction'],
-                "chart_path": state['chart_path']
-            }
-            
-            return {
-                "messages": [json.dumps(result)],
-                "processed": ["content"]
-            }
-            
+            result = await self.agent.analyze_chart(state)
+            # try:
+            #     # 데이터 가져오기
+            #     state = self.fetch_stock_data(state)
+
+            #     # 차트 분석
+            #     state = self.analyze_chart(state)
+
+            #     # 미래 예측
+            #     state = self.predict_future(state)
+
+            #     # 차트 생성
+            #     state = self.plot_chart(state)
+
+            #     # 결과 생성
+            #     result = {
+            #         "symbol": state["symbol"],
+            #         "exchange": state["exchange"],
+            #         "chart_analysis": state["chart_analysis"],
+            #         "future_prediction": state["future_prediction"],
+            #         "chart_path": state["chart_path"],
+            #     }
+
+            print("chart analysis result: ", result)
+
+            state["common"]["messages"].append({"role": "assistant", "content": result})
+
+            return state
+
         except Exception as e:
             error_message = f"Error in ChartAnalysisNode: {str(e)}"
-            return {
-                "messages": [json.dumps({"error": error_message})],
-                "processed": ["error"]
-            }
+            raise HTTPException(status_code=500, detail=error_message)
