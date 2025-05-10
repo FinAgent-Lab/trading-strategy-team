@@ -10,6 +10,8 @@ from fastapi import HTTPException
 from uuid import uuid4
 import bcrypt
 
+from src.utils.types.UserProvider import UserAccountProvider, UserSecretProvider
+
 
 class UserService:
     _instance = None
@@ -159,4 +161,47 @@ class UserService:
                     accounts,
                 )
             ),
+        }
+
+    async def get_user_info(
+        self,
+        user_id: str,
+    ):
+        user_account = await prisma.useraccount.find_first_or_raise(
+            where={
+                "user_id": user_id,
+                "deleted_at": None,
+                "provider": UserAccountProvider.KIS,
+            }
+        )
+
+        app_key = await prisma.usersecret.find_first_or_raise(
+            where={
+                "user_id": user_id,
+                "deleted_at": None,
+                "key": UserSecretProvider.KIS_APP_KEY,
+            }
+        )
+
+        secret_key = await prisma.usersecret.find_first_or_raise(
+            where={
+                "user_id": user_id,
+                "deleted_at": None,
+                "key": UserSecretProvider.KIS_SECRET_KEY,
+            }
+        )
+
+        access_token = await prisma.usersecret.find_first_or_raise(
+            where={
+                "user_id": user_id,
+                "deleted_at": None,
+                "key": UserSecretProvider.KIS_ACCESS_TOKEN,
+            }
+        )
+
+        return {
+            "account_number": user_account.account,
+            "app_key": app_key.value,
+            "secret_key": secret_key.value,
+            "access_token": access_token.value,
         }
