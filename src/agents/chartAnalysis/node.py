@@ -17,6 +17,9 @@ from typing import List
 from pydantic import BaseModel, Field
 from src.dtos.kis.tradeDto import TradeDto
 from src.agents.tools.chartTool import get_overseas_stock_daily_price
+from src.utils.functions.convertChatToPrompt import convertChatToPrompt
+from src.utils.types.ChatType import ChatRole
+from src.utils.types.PromptType import PromptType
 
 
 # Tool의 입력 스키마 정의
@@ -60,23 +63,23 @@ class ChartAnalysisAgent(BaseNode):
     def invoke():
         pass
 
-    def get_stock_data(self, input: GetStockDataInput):
-        """해외 주식 일별 시세를 조회합니다."""
-        # KisService에서 토큰 가져오기
-        access_token = self.kis_service.get_access_token()
-        input_dict = input.model_dump()
-        input_dict["access_token"] = access_token
+    # def get_stock_data(self, input: GetStockDataInput):
+    #     """해외 주식 일별 시세를 조회합니다."""
+    #     # KisService에서 토큰 가져오기
+    #     access_token = self.kis_service.get_access_token()
+    #     input_dict = input.model_dump()
+    #     input_dict["access_token"] = access_token
 
-        # KisService를 통해 데이터 가져오기
-        response = self.kis_service.get_overseas_stock_daily_price(input_dict)
-        return response
+    #     # KisService를 통해 데이터 가져오기
+    #     response = self.kis_service.get_overseas_stock_daily_price(input_dict)
+    #     return response
 
     async def analyze_chart(self, state: ChartAnalysisState) -> str:
         try:
             symbol = state["symbol"]
             exchange = state["exchange"]
             print(
-                f"[ChartAnalysis] 차트 분석 시작 - 심볼: {symbol}, 거래소: {exchange}"
+                f"[ChartAnalysis] 차트 분석 시작 - 심볼: {symbol}, 거래소: {exchange}\n"
             )
 
             # KisService에서 access_token 가져오기
@@ -88,7 +91,7 @@ class ChartAnalysisAgent(BaseNode):
             # access_token = state["common"]["user"]["access_token"]
 
             # Tool 입력 생성
-            print("[ChartAnalysis] 주가 데이터 요청 준비 중...")
+            print("[ChartAnalysis] 주가 데이터 요청 준비 중...\n")
             tool_input = {
                 "input": {
                     # "access_token": access_token,  # 응답 전체를 access_token으로 사용
@@ -102,20 +105,20 @@ class ChartAnalysisAgent(BaseNode):
                 }
             }
             print(
-                "[ChartAnalysis] 입력 데이터 구성 완료"
+                "[ChartAnalysis] 입력 데이터 구성 완료\n"
             )  # 보안을 위해 전체 입력 데이터는 출력하지 않음
 
             # Tool 직접 호출
-            print("[ChartAnalysis] KIS API 호출 중...")
+            print("[ChartAnalysis] KIS API 호출 중...\n")
             result = await get_overseas_stock_daily_price(tool_input)
-            print("[ChartAnalysis] KIS API 응답 수신")
+            print("[ChartAnalysis] KIS API 응답 수신\n")
             # print(f"[ChartAnalysis] 응답 데이터: {result}")
 
             if result.get("rt_cd") != "0":
                 raise Exception(f"API 오류: {result.get('msg1', '알 수 없는 오류')}")
 
             # 데이터프레임 변환 및 분석
-            print("[ChartAnalysis] 데이터 분석 시작...")
+            print("[ChartAnalysis] 데이터 분석 시작...\n")
             output2_list = result.get("output2", [])
             if output2_list and len(output2_list) > 0:
                 # 모든 데이터를 리스트로 변환
@@ -137,8 +140,8 @@ class ChartAnalysisAgent(BaseNode):
 
                 # 전체 데이터로 데이터프레임 생성
                 data = pd.DataFrame(data_list)
-                print(f"[ChartAnalysis] 데이터프레임 생성 완료 (총 {len(data)} 행):")
-                print(f"[ChartAnalysis] 최근 5일 데이터:\n{data.head()}")
+                print(f"[ChartAnalysis] 데이터프레임 생성 완료 (총 {len(data)} 행):\n")
+                print(f"[ChartAnalysis] 최근 5일 데이터:\n{data.head()}\n")
 
                 # 분석 프롬프트에도 전체 데이터 반영
                 analysis_prompt = f"""
@@ -155,21 +158,21 @@ class ChartAnalysisAgent(BaseNode):
                 3. 단기 매매 관점에서의 투자 위험도
                 4. 향후 가격 움직임에 대한 전망
                 """
-                print("[ChartAnalysis] 프롬프트 생성 완료")
+                print("[ChartAnalysis] 프롬프트 생성 완료\n")
 
                 # AI 분석 수행
-                print("[ChartAnalysis] AI 분석 수행 중...")
+                print("[ChartAnalysis] AI 분석 수행 중...\n")
                 analysis_result = self.llm.invoke(analysis_prompt)
-                print("[ChartAnalysis] AI 분석 완료")
+                print("[ChartAnalysis] AI 분석 완료\n")
 
                 return analysis_result.content
             else:
-                print("[ChartAnalysis] 오류: output2 데이터가 없습니다")
+                print("[ChartAnalysis] 오류: output2 데이터가 없습니다\n")
                 return "주가 데이터를 가져오는데 실패했습니다."
 
         except Exception as e:
             error_msg = f"[ChartAnalysis] 오류 발생: {str(e)}"
-            print(error_msg)
+            print(error_msg, "\n")
             return error_msg
 
     def execute_tool_call(self, tool_call: ToolCall) -> str:
@@ -361,30 +364,32 @@ class ChartAnalysisNode(BaseNode):
             ]
         )
 
-        prompt = [{"role": "system", "content": systemp_prmopt}] + state["common"][
-            "messages"
-        ]
+        prompt = (
+            [{"role": "system", "content": systemp_prmopt}]
+            + convertChatToPrompt(state["common"]["history"])
+            + convertChatToPrompt(state["common"]["messages"])
+        )
 
         class StructuredOutput(BaseModel):
             symbol: str = Field(..., description="The stock symbol")
             exchange: str = Field(..., description="The stock exchange code")
 
-        response: StructuredOutput = await self.llm.with_structured_output(
-            StructuredOutput
-        ).ainvoke(prompt)
-
-        print("chart analysis invoke structured output: ", response)
-
-        if response.exchange == "" or response.symbol == "":
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid Structured Output in ChartAnalysisNode: {response}",
-            )
-
-        state["exchange"] = response.exchange
-        state["symbol"] = response.symbol
-
         try:
+            response: StructuredOutput = await self.llm.with_structured_output(
+                StructuredOutput
+            ).ainvoke(prompt)
+
+            print("chart analysis invoke structured output: ", response)
+
+            if response.exchange == "" or response.symbol == "":
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid Structured Output in ChartAnalysisNode: {response}",
+                )
+
+            state["exchange"] = response.exchange
+            state["symbol"] = response.symbol
+
             result = await self.agent.analyze_chart(state)
             # try:
             #     # 데이터 가져오기
@@ -408,12 +413,19 @@ class ChartAnalysisNode(BaseNode):
             #         "chart_path": state["chart_path"],
             #     }
 
-            print("chart analysis result: ", result)
+            print("chart analysis result: ", result, "\n")
 
-            state["common"]["messages"].append({"role": "assistant", "content": result})
+            state["common"]["messages"].append(
+                PromptType(
+                    role=ChatRole.ASSISTANT,
+                    content=result,
+                )
+            )
 
             return state
 
         except Exception as e:
-            error_message = f"Error in ChartAnalysisNode: {str(e)}"
+            error_message = (
+                f"[Error in chart-analysis agent -> chart-analysis node] {e.__str__()}"
+            )
             raise HTTPException(status_code=500, detail=error_message)

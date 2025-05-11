@@ -13,6 +13,9 @@ from src.agents.chartAnalysis.graph import ChartAnalysisGraph
 from src.agents.idea.graph import IdeaGraph
 from src.agents.factor.graph import factor_agent_graph
 from src.utils.types.ChatType import ChatAgent, ChatRole
+from src.utils.types.PromptType import PromptType
+import traceback
+from src.utils.logger import logger
 
 
 class SupervisorGraph(GraphBuilder):
@@ -24,7 +27,7 @@ class SupervisorGraph(GraphBuilder):
         self.chat_service = ChatService()
 
         self._builder = StateGraph(SupervisorState)
-        self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=Global.env.OPENAI_API_KEY)
+        self.llm = ChatOpenAI(model="gpt-4.1", api_key=Global.env.OPENAI_API_KEY)
         self.build()
 
     def build(self):
@@ -35,35 +38,41 @@ class SupervisorGraph(GraphBuilder):
         self._builder.add_node("investment", InvestmentGraph().invoke)
 
         # 노드 연결
-        self._builder.add_edge(START, "chart_analysis")
-        self._builder.add_edge("chart_analysis", "idea")
-        self._builder.add_edge("idea", "factor")
-        self._builder.add_edge("factor", "investment")
-        self._builder.add_edge("investment", END)
+        # self._builder.add_edge(START, "chart_analysis")
+        # self._builder.add_edge("chart_analysis", "idea")
+        # self._builder.add_edge("idea", "factor")
+        # self._builder.add_edge("factor", "investment")
+        # self._builder.add_edge("investment", END)
 
-        # def get_next_node(state: SupervisorState) -> str:
-        #     if state["messages"][-1].content == "chart":
-        #         return "chart_analysis"
-        #     elif state["messages"][-1].content == "idea":
-        #         return "idea"
-        #     elif state["messages"][-1].content == "factor":
-        #         return "factor"
-        #     elif state["messages"][-1].content == "investment":
-        #         return "investment"
-        #     else:
-        #         return END
+        def get_next_node(state: SupervisorState) -> str:
+            response = state["common"]["messages"][-1].content
+            if response == "chart-analysis":
+                return "chart_analysis"
+            elif response == "idea":
+                return "idea"
+            elif response == "factor":
+                return "factor"
+            elif response == "investment":
+                return "investment"
+            else:
+                return END
 
-        # self._builder.add_edge(START, "supervisor")
-        # self._builder.add_conditional_edges(
-        #     "supervisor",
-        #     get_next_node,
-        #     path_map={
-        #         "idea": "idea",
-        #         "factor": "factor",
-        #         "investment": "investment",
-        #         END: END,
-        #     },
-        # )
+        self._builder.add_edge(START, "supervisor")
+        self._builder.add_conditional_edges(
+            "supervisor",
+            get_next_node,
+            path_map={
+                "chart_analysis": "chart_analysis",
+                "idea": "idea",
+                "factor": "factor",
+                "investment": "investment",
+                END: END,
+            },
+        )
+        self._builder.add_edge("chart_analysis", "supervisor")
+        self._builder.add_edge("idea", "supervisor")
+        self._builder.add_edge("factor", "supervisor")
+        self._builder.add_edge("investment", "supervisor")
 
         self.graph = self._builder.compile()
 
@@ -76,24 +85,28 @@ class SupervisorGraph(GraphBuilder):
         return self._builder.edges()
 
     async def invoke(self, state: SupervisorState):
-        room_id = state["common"]["room"]["id"]
-        user_id = state["common"]["user"]["id"]
-        input = str(state["common"]["messages"][-1].content)
+        print(
+            f"--------------------------------Supervisor input: {state['common']['messages'][-1]}--------------------------------"
+        )
+        try:
+            response: SupervisorState = await self.graph.ainvoke(state)
 
-        # 유저 input만 DB에 저장한다. 그 외에는 다른 Agent에서 이미 저장이 되어있기 때문.
-        if isinstance(state["common"]["messages"][-1], HumanMessage):
-            await self.chat_service.create_chat(
-                room_id,
-                user_id,
-                CreateChatDto(
-                    content=input,
-                    role=ChatRole.USER,
-                    agent=ChatAgent.HUMAN,
-                ),
+            response["common"]["messages"][-1]
+
+        except Exception as e:
+            logger.error("\n\n\n🚨🚨🚨🚨🚨🚨🚨🚨 - Error Occurs - 🚨🚨🚨🚨🚨🚨🚨🚨\n")
+            logger.error(traceback.format_exc())
+            logger.error("\n🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨\n\n\n")
+            state["common"]["messages"].append(
+                PromptType(
+                    role=ChatRole.ASSISTANT,
+                    content=e.__str__(),
+                )
             )
-
-        print(f"Supervisor input: {state['common']['messages'][-1]}")
-        response: SupervisorState = await self.graph.ainvoke(state)
-        print(f"Supervisor response: {response}")
+            res: SupervisorState = await self.graph.ainvoke(state)
+            return res
+        print(
+            f"--------------------------------Supervisor response: {response['common']['messages'][-1]}--------------------------------\n"
+        )
 
         return state

@@ -6,7 +6,11 @@ from src.agents.supervisor.graph import SupervisorGraph
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.messages import HumanMessage
 from src.agents.supervisor.state import SupervisorState
+from src.dtos.chat.chatDto import CreateChatDto
+from src.services.chat import ChatService
 from src.services.user import UserService
+from src.utils.types.ChatType import ChatAgent, ChatRole
+from src.utils.types.PromptType import PromptType
 
 
 class TradeAgentService:
@@ -17,6 +21,7 @@ class TradeAgentService:
     factor_agent: CompiledStateGraph
     trade_agent: SupervisorGraph
     user_service: UserService
+    chat_service: ChatService
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -30,9 +35,12 @@ class TradeAgentService:
         ):  # 이미 초기화된 경우는 다시 초기화하지 않음
             self._initialized = True
             self._data = {}
+
+            self.user_service = UserService()
+            self.chat_service = ChatService()
+
             # Main Trade Agent
             self.trade_agent = SupervisorGraph()
-            self.user_service = UserService()
 
             # Extra Agents
             self.investment_agent = InvestmentGraph()
@@ -41,7 +49,10 @@ class TradeAgentService:
             # self.factor_agent = factor_agent_graph()
 
     async def chat_trade_agent(self, room_id: str, user_id: str, input: str):
+
         user_info = await self.user_service.get_user_info(user_id)
+
+        history = await self.chat_service.get_chat_list(room_id)
 
         state: SupervisorState = {
             "common": {
@@ -55,11 +66,30 @@ class TradeAgentService:
                     "app_secret": user_info["secret_key"],
                     "access_token": user_info["access_token"],
                 },
-                "messages": [HumanMessage(input)],
+                "messages": [PromptType(role=ChatRole.USER, content=input)],
+                "history": history.chats,
             },
         }
 
-        return await self.trade_agent.invoke(state)
+        await self.chat_service.create_chat(
+            room_id,
+            user_id,
+            CreateChatDto(content=input, role=ChatRole.USER, agent=ChatAgent.HUMAN),
+        )
+
+        res = await self.trade_agent.invoke(state)
+
+        await self.chat_service.create_chat(
+            room_id,
+            user_id,
+            CreateChatDto(
+                content=res["common"]["messages"][-1].content,
+                role=ChatRole.ASSISTANT,
+                agent=ChatAgent.TRADE,
+            ),
+        )
+
+        return res["common"]["messages"][-1]
 
     async def chat_investment_agent(self, room_id: str, user_id: str, input: str):
         user_info = await self.user_service.get_user_info(user_id)
@@ -74,7 +104,7 @@ class TradeAgentService:
                     "app_secret": user_info["secret_key"],
                     "access_token": user_info["access_token"],
                 },
-                "messages": [HumanMessage(input)],
+                "messages": [PromptType(role=ChatRole.USER, content=input)],
             },
         }
         return await self.investment_agent.invoke(state)

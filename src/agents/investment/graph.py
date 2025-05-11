@@ -5,10 +5,8 @@ from src.agents.supervisor.state import SupervisorState
 from src.config import Global
 from src.agents.investment.state import InvestmentState
 from src.agents.investment.node import InvestmentNode
-from src.dtos.chat.chatDto import CreateChatDto
 from src.utils.graphBuilder import GraphBuilder
 from src.services.chat import ChatService
-from src.utils.types.ChatType import ChatAgent, ChatRole
 
 
 class InvestmentGraph(GraphBuilder):
@@ -67,23 +65,14 @@ class InvestmentGraph(GraphBuilder):
         return self._builder.edges()
 
     async def invoke(self, state: SupervisorState):
-        room_id = state["common"]["room"]["id"]
-        user_id = state["common"]["user"]["id"]
-        input = state["common"]["messages"][-1].content
 
-        await self.chat_service.create_chat(
-            room_id,
-            user_id,
-            CreateChatDto(
-                content=input,
-                role=ChatRole.USER,
-                agent=ChatAgent.HUMAN,
-            ),
+        print(
+            f"--------------------------------Investment input: {state['common']['messages'][-1]}--------------------------------"
         )
-
-        print(f"Investment input: {state}")
         response: InvestmentState = await self.graph.ainvoke(state)
         res = response["common"]["messages"][-1]
-        print(f"Investment response: {res}")
+        print(
+            f"--------------------------------Investment response: {response['common']['messages'][-1]}--------------------------------\n"
+        )
 
         return res

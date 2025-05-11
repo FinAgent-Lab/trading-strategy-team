@@ -2,7 +2,6 @@ import json
 from fastapi import HTTPException
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import Tool
-from src.dtos.chat.chatDto import CreateChatDto
 from src.services.chat import ChatService
 from src.agents.investment.state import InvestmentState
 from src.config import Global
@@ -17,7 +16,8 @@ from src.agents.tools.kisTool import (
     update_access_token,
 )
 from src.utils.functions.convertChatToPrompt import convertChatToPrompt
-from src.utils.types.ChatType import ChatAgent, ChatRole
+from src.utils.types.ChatType import ChatRole
+from src.utils.types.PromptType import PromptType
 
 
 class InvestmentNode(BaseNode):
@@ -109,16 +109,16 @@ class InvestmentNode(BaseNode):
         room_id = state["common"]["room"]["id"]
         user_id = state["common"]["user"]["id"]
 
-        chats = await self.chat_service.get_chat_list(room_id)
+        history = convertChatToPrompt(state["common"]["history"]) + convertChatToPrompt(
+            state["common"]["messages"]
+        )
 
-        history = convertChatToPrompt(chats["chats"])
+        # # print history
+        # print("--------------------------------history--------------------------------")
 
-        # print history
-        print("--------------------------------history--------------------------------")
-
-        for h in history:
-            print(f"{h['role']}: {h['content']}")
-        print("-----------------------------------------------------------------------")
+        # for h in history:
+        #     print(f"{h['role']}: {h['content']}")
+        # print("-----------------------------------------------------------------------")
 
         prompt = [
             {
@@ -146,30 +146,20 @@ class InvestmentNode(BaseNode):
             if messages.content.strip() != "":
                 print(f"save chat for tool call: {messages.content}")
 
-                await self.chat_service.create_chat(
-                    room_id,
-                    user_id,
-                    CreateChatDto(
-                        content=messages.content,
-                        role=ChatRole.ASSISTANT,
-                        agent=ChatAgent.INVESTMENT,
-                    ),
-                )
-
                 state["common"]["messages"].append(
-                    {
-                        "role": "assistant",
-                        "content": messages.content,
-                    }
+                    PromptType(
+                        role=ChatRole.ASSISTANT,
+                        content=messages.content,
+                    )
                 )
 
                 return state
             try:
                 state["common"]["messages"].append(
-                    {
-                        "role": "assistant",
-                        "content": messages.model_dump_json(),
-                    }
+                    PromptType(
+                        role=ChatRole.ASSISTANT,
+                        content=messages.model_dump_json(),
+                    )
                 )
 
                 res = await self.execute_tool_call(tool_call)
@@ -204,7 +194,7 @@ class InvestmentNode(BaseNode):
         # 툴 호출 결과가 있을 경우, 응답을 가공해서 response
         if len(tool_call_results) > 0:
             tool_messages = await self.llm_with_tools.ainvoke(
-                state["common"]["messages"]
+                convertChatToPrompt(state["common"]["messages"])
                 + [
                     {
                         "role": "assistant",
@@ -218,44 +208,24 @@ class InvestmentNode(BaseNode):
                     }
                 ]
             )
-            print(f"save chat for tool call result: {tool_messages.content}")
-
-            await self.chat_service.create_chat(
-                room_id,
-                user_id,
-                CreateChatDto(
-                    content=tool_messages.content,
-                    role=ChatRole.ASSISTANT,
-                    agent=ChatAgent.INVESTMENT,
-                ),
-            )
+            print(f"Investment chat for tool call result: {tool_messages.content}")
 
             state["common"]["messages"].append(
-                {
-                    "role": "assistant",
-                    "content": tool_messages.content,
-                }
+                PromptType(
+                    role=ChatRole.ASSISTANT,
+                    content=tool_messages.content,
+                )
             )
 
             return state
 
-        print(f"save chat: {messages.content}")
-
-        await self.chat_service.create_chat(
-            room_id,
-            user_id,
-            CreateChatDto(
-                content=messages.content,
-                role=ChatRole.ASSISTANT,
-                agent=ChatAgent.INVESTMENT,
-            ),
-        )
+        print(f"Investment chat: {messages.content}")
 
         state["common"]["messages"].append(
-            {
-                "role": "assistant",
-                "content": messages.content,
-            }
+            PromptType(
+                role=ChatRole.ASSISTANT,
+                content=messages.content,
+            )
         )
 
         return state

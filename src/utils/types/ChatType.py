@@ -15,3 +15,4 @@ class ChatAgent(str, Enum):
     FACTOR = "factor"
     EVALUATION = "evaluation"
     SUPERVISOR = "supervisor"
+    TRADE = "trade"
