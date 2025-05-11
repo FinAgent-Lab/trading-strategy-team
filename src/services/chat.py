@@ -1,5 +1,5 @@
 from typing_extensions import Self
-from src.dtos.chat.chatDto import CreateChatDto
+from src.dtos.chat.chatDto import ChatListDto, CreateChatDto, GetChatListDto
 from src.databases.db import prisma
 from uuid import uuid4
 from datetime import datetime, timezone
@@ -52,7 +52,7 @@ class ChatService:
             ),
         }
 
-    async def get_chat_list(self, room_id: str):
+    async def get_chat_list(self, room_id: str) -> GetChatListDto:
         chats = await prisma.chat.find_many(
             where={
                 "room_id": room_id,
@@ -61,20 +61,20 @@ class ChatService:
             order={"created_at": "asc"},
         )
 
-        return {
-            "chats": list(
+        return GetChatListDto(
+            chats=list(
                 map(
-                    lambda chat: {
-                        "id": chat.id,
-                        "content": chat.content,
-                        "role": chat.role,
-                        "agent": chat.agent,
-                        "created_at": chat.created_at,
-                    },
+                    lambda chat: ChatListDto(
+                        id=chat.id,
+                        content=chat.content,
+                        role=chat.role,
+                        agent=chat.agent,
+                        created_at=chat.created_at,
+                    ),
                     chats,
                 )
             ),
-        }
+        )
 
     async def create_chat(self, room_id: str, user_id: str, input: CreateChatDto):
 

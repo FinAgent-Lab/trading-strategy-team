@@ -46,8 +46,12 @@ class ChartAnalysisGraph(GraphBuilder):
 
     async def invoke(self, state: ChartAnalysisState):
 
-        print(f"Chart Analysis input: {state['common']['messages'][-1]}")
+        print(
+            f"--------------------------------Chart Analysis input: {state['common']['messages'][-1]}--------------------------------"
+        )
         response: ChartAnalysisState = await self.graph.ainvoke(state)
-        print(f"Chart Analysis After state: {state}")
+        print(
+            f"--------------------------------Chart Analysis response: {response['common']['messages'][-1]}--------------------------------\n"
+        )
 
         return state

@@ -56,11 +56,13 @@ class IdeaGraph(GraphBuilder):
         return self._builder.edges()
 
     async def invoke(self, state: IdeaState):
-        room_id = state["common"]["room"]["id"]
-        user_id = state["common"]["user"]["id"]
 
-        print(f"Idea input: {state['common']['messages'][-1]}")
+        print(
+            f"--------------------------------Idea input: {state['common']['messages'][-1]}--------------------------------"
+        )
         response: IdeaState = await self.graph.ainvoke(state)
         state["hypothesis"] = response["hypothesis"]
-        print(f"Idea response: {state}")
+        print(
+            f"--------------------------------Idea response: {response['common']['messages'][-1]}--------------------------------\n"
+        )
         return state

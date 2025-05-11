@@ -37,8 +37,10 @@ class FactorAgent:
         #     [
         #         ("system", LogicPrompt["system"]),
         #         ("human", LogicPrompt["human"].format(hypothesis=state["hypothesis"])),
+        print(
+            f"--------------------------------Factor input: {state['common']['messages'][-1]}--------------------------------"
+        )
 
-        print(f"Hypothesis: {state['hypothesis']}")
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", LogicPrompt["system"]),
@@ -192,6 +194,10 @@ class FactorAgent:
 
         state["rebalance_shares"] = shares
 
+        print(
+            f"--------------------------------Factor Response: {state['common']['messages'][-1]}--------------------------------\n"
+        )
+
         return state
 
     def fetch_prices(self, tickers):
@@ -204,4 +210,5 @@ class FactorAgent:
         if len(tickers) == 1:
             t = tickers[0]
             return {t: float(closes["Close"].iloc[-1])}  # type: ignore
+
         return {t: float(closes[t]["Close"].iloc[-1]) for t in tickers}  # type: ignore

@@ -4,6 +4,9 @@ from src.config import Global
 from src.utils.baseNode import BaseNode
 from langchain_core.prompts import ChatPromptTemplate
 import json
+from src.utils.types.ChatType import ChatRole
+from src.utils.types.PromptType import PromptType
+from src.utils.functions.convertChatToPrompt import convertChatToPrompt
 
 
 class IdeaNode(BaseNode):
@@ -63,9 +66,11 @@ class IdeaNode(BaseNode):
         )
 
     async def invoke(self, state: IdeaState) -> IdeaState:
-        prompt = [{"role": "system", "content": self.system_prompt}] + state["common"][
-            "messages"
-        ]
+        prompt = (
+            [{"role": "system", "content": self.system_prompt}]
+            + convertChatToPrompt(state["common"]["history"])
+            + convertChatToPrompt(state["common"]["messages"])
+        )
 
         # if isinstance(common_messages, list):
         #     for m in common_messages:
@@ -77,12 +82,14 @@ class IdeaNode(BaseNode):
         # else:
         #     prompt.append({"role": "user", "content": common_messages})
 
-        print(f"Idea Node Prompt: {prompt}")
         messages = await self.llm.ainvoke(prompt)
-        print(f"Final Hypothesis: {(messages.content)}")
+        print(f"Final Hypothesis: {(messages.content)}\n")
 
         state["common"]["messages"].append(
-            {"role": "assistant", "content": messages.content}
+            PromptType(
+                role=ChatRole.ASSISTANT,
+                content=messages.content,
+            )
         )
 
         state["hypothesis"] = json.loads(messages.content)
