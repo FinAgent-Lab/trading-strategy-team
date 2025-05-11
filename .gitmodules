@@ -1,0 +1,4 @@
+[submodule "fin-agent-lab-client"]
+	path = fin-agent-lab-client
+	url = https://github.com/FinAgent-Lab/fin-agent-lab-client
+	branch = main
