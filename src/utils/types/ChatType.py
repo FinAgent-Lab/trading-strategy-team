@@ -10,8 +10,8 @@ class ChatRole(str, Enum):
 class ChatAgent(str, Enum):
     HUMAN = "human"
     SYSTEM = "system"
-    TRADE = "trade"
+    INVESTMENT = "investment"
     IDEA = "idea"
     FACTOR = "factor"
-    ANALYSIS = "analysis"
     EVALUATION = "evaluation"
+    SUPERVISOR = "supervisor"

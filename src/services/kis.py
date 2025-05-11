@@ -46,6 +46,14 @@ class KisService:
             },
         )
 
+        if access_token:
+            created_at = datetime.fromisoformat(access_token.created_at.isoformat())
+            now = datetime.now(timezone.utc)
+            hours_diff = (now - created_at).total_seconds() / 3600
+
+            if hours_diff >= 12:
+                return await self.update_access_token(user_id)
+
         return (
             access_token.value
             if access_token

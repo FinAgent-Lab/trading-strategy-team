@@ -1,11 +1,9 @@
 from abc import ABC, abstractmethod
-from typing_extensions import Self
 
 
 class GraphBuilder(ABC):
-
     @abstractmethod
-    def build(self) -> Self: ...
+    def build(self): ...
 
     @abstractmethod
     def get_nodes(self) -> dict[str, any]: ...

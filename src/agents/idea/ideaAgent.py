@@ -1,6 +1,6 @@
-from src.agents.ideaAgent.graph import IdeaGraph
+from src.agents.idea.graph import IdeaGraph
 
-test_data= [
+test_data = [
     """### NVDA 주가 전망
 
 ### 최근 동향 요약
@@ -38,6 +38,7 @@ test_data= [
 이 데이터를 기반으로 시장의 변화에 주의하고, 적절한 대응 전략을 갖추기를 권장합니다."""
 ]
 
+
 class IdeaAgent:
     def __init__(self):
         self.graph = IdeaGraph()
@@ -61,9 +62,13 @@ class IdeaAgent:
     def test():
         agent = IdeaAgent()
         test_input = {
-            "messages": [("user",f"{test_data[0]} 위는 분석 결과입니다. 이 결과를 바탕으로 트레이딩 가설을 생성해주세요. 반드시 형식을 지켜주세요.")]
+            "messages": [
+                (
+                    "user",
+                    f"{test_data[0]} 위는 분석 결과입니다. 이 결과를 바탕으로 트레이딩 가설을 생성해주세요. 반드시 형식을 지켜주세요.",
+                )
+            ]
         }
         result = agent.invoke(test_input)
         print("테스트 결과:", result)
         return result
-    

@@ -1,10 +1,12 @@
 from langchain_core.prompts import ChatPromptTemplate
-from src.agents.factorAgent.prompt import LogicPrompt, CodePrompt
+from src.agents.factor.prompt import LogicPrompt, CodePrompt
 from langchain_experimental.tools import PythonREPLTool
 from langchain.agents import initialize_agent, AgentType
 import yfinance as yf
 import math
 import pandas as pd
+
+from src.agents.factor.state import FactorAgentState
 
 
 class FactorAgent:
@@ -21,7 +23,7 @@ class FactorAgent:
         """
         self.llm = llm
 
-    def generate_ast(self, state):
+    def generate_ast(self, state: FactorAgentState):
         """
         금융 가설을 IF-THEN-ELSE 형태의 AST로 변환
 
@@ -31,10 +33,19 @@ class FactorAgent:
         Returns:
             AST 딕셔너리
         """
+        # prompt = ChatPromptTemplate.from_messages(
+        #     [
+        #         ("system", LogicPrompt["system"]),
+        #         ("human", LogicPrompt["human"].format(hypothesis=state["hypothesis"])),
+
+        print(f"Hypothesis: {state['hypothesis']}")
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", LogicPrompt["system"]),
-                ("human", LogicPrompt["human"].format(hypothesis=state["hypothesis"])),
+                (
+                    "human",
+                    LogicPrompt["human"],
+                ),
             ]
         )
 
@@ -49,9 +60,11 @@ class FactorAgent:
                 response = chain.invoke({"hypothesis": hypothesis})
                 ast[ticker].append(response.content)
 
-        return {"ast": ast}
+        state["ast"] = ast
 
-    def execute_code(self, state):
+        return state
+
+    def execute_code(self, state: FactorAgentState):
         """
         AST를 기반으로 Python 코드를 실행하여 알파 신호 계산
 
@@ -64,6 +77,8 @@ class FactorAgent:
         python_tool = PythonREPLTool()
 
         ast = state["ast"]
+
+        print(f"Execute Code AST: {ast}")
 
         prompt_template = ChatPromptTemplate.from_messages(
             [("system", CodePrompt["system"]), ("human", CodePrompt["human"])]
@@ -82,13 +97,17 @@ class FactorAgent:
             for ast_item in ast_list:
                 formatted_prompt = prompt_template.format(ast=ast_item, ticker=ticker)
                 response = agent.run(formatted_prompt)
-                alpha_signal.append(response.content)
+                print()
+                print(f"alpha response: {response}")
+                alpha_signal.append(response)
 
             alpha[ticker] = alpha_signal
 
-        return {"alpha": alpha}
+        state["alpha"] = alpha
 
-    def final_output(self, state):
+        return state
+
+    def final_output(self, state: FactorAgentState):
         """
         개별 알파 신호들을 종합하여 최종 알파 값 계산
         모든 알파 값의 합이 1이 되도록 정규화
@@ -100,6 +119,9 @@ class FactorAgent:
             최종 알파 값 딕셔너리 (합이 1이 되도록 정규화)
         """
         alpha = state["alpha"]
+
+        print(f"Final Output Alpha: {alpha}")
+
         final_alpha = {}
 
         # 각 종목별 알파 값 계산
@@ -120,9 +142,13 @@ class FactorAgent:
             for ticker in final_alpha:
                 final_alpha[ticker] = 1.0 / num_tickers
 
-        return {"final_alpha": final_alpha}
+        state["final_alpha"] = final_alpha
 
-    def rebalance_value(self, state):
+        print(f"Final Output Final Alpha: {final_alpha}")
+
+        return state
+
+    def rebalance_value(self, state: FactorAgentState):
         """
         포트폴리오 금액기준 리벨런싱
         """
@@ -141,9 +167,13 @@ class FactorAgent:
         for ticker in current_portfolio.keys() - target_ratio.keys():
             out[ticker] = -current_portfolio[ticker]
 
-        return {"rebalance_value": out}
+        print(f"Rebalance Value: {out}")
 
-    def rebalance_shares(self, state):
+        state["rebalance_value"] = out
+
+        return state
+
+    def rebalance_shares(self, state: FactorAgentState):
         """
         포트폴리오 주수 기준 리벨런싱
         """
@@ -158,7 +188,11 @@ class FactorAgent:
             adj = math.floor(raw)
             shares[ticker] = int(adj)
 
-        return {"rebalance_shares": shares}
+        print(f"Rebalance Shares: {shares}")
+
+        state["rebalance_shares"] = shares
+
+        return state
 
     def fetch_prices(self, tickers):
         """
