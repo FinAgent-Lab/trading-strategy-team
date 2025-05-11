@@ -1,9 +1,5 @@
 # 📈 FinAgent Trading Strategy Team
 
-**AI-powered automated trading strategy platform**
-
-![FinAgent Banner](https://github.com/user-attachments/assets/f9ab1fec-2f29-421d-9575-1221a6d9810b)
-
 [English](./README_en.md) | [한국어](./README.md)
 
 ---
