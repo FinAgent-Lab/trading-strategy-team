@@ -12,3 +12,4 @@ class FactorAgentState(TypedDict):
     final_alpha: dict
     rebalance_value: dict
     rebalance_shares: dict
+    closed_prices: dict

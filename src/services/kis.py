@@ -47,9 +47,9 @@ class KisService:
         )
 
         if access_token:
-            created_at = datetime.fromisoformat(access_token.created_at.isoformat())
+            updated_at = datetime.fromisoformat(access_token.updated_at.isoformat())
             now = datetime.now(timezone.utc)
-            hours_diff = (now - created_at).total_seconds() / 3600
+            hours_diff = (now - updated_at).total_seconds() / 3600
 
             if hours_diff >= 12:
                 return await self.update_access_token(user_id)
@@ -107,6 +107,11 @@ class KisService:
 
         if type(body) == str:
             raise HTTPException(status_code=400, detail="KIS 액세스 토큰 발급 실패")
+
+        print("update access token")
+        print(user_id)
+        print("body")
+        print(body)
 
         await prisma.usersecret.upsert(
             where={
