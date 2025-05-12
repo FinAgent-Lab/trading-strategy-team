@@ -195,10 +195,10 @@ class TradeDto:
             description="""This field is always 0.""",
         )  # 주문서버구분코드 ("0" 으로 설정)
         ORD_DVSN: Optional[str] = Field(
-            ...,
+            default="00",
             min_length=2,
             max_length=2,
-            description="""ORD_DVSN is the order division.
+            description="""ORD_DVSN is the order division. Default is 00.
             ### [Header tr_id TTTT1002U(US Buy Order)]
             00 : Limit Price
             32 : LOO(Limit On Open)

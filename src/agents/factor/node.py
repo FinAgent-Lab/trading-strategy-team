@@ -128,7 +128,10 @@ class FactorAgent:
 
         # 각 종목별 알파 값 계산
         for ticker, alpha_signals in alpha.items():
-            alpha_values = [float(signal) for signal in alpha_signals]
+            filtered_alpha_signals = list(
+                filter(lambda signal: signal == "0" or signal == "1", alpha_signals)
+            )
+            alpha_values = [float(signal) for signal in filtered_alpha_signals]
             final_alpha[ticker] = sum(alpha_values) / len(alpha_values)
 
         # 모든 알파 값의 합 계산
@@ -180,7 +183,7 @@ class FactorAgent:
         포트폴리오 주수 기준 리벨런싱
         """
         rebalance_value = state["rebalance_value"]
-        prices = self.fetch_prices(rebalance_value.keys())
+        prices = self.fetch_prices(list(rebalance_value.keys()))
 
         shares = {}
         for ticker, cash in rebalance_value.items():
@@ -191,6 +194,8 @@ class FactorAgent:
             shares[ticker] = int(adj)
 
         print(f"Rebalance Shares: {shares}")
+
+        state["closed_prices"] = prices
 
         state["rebalance_shares"] = shares
 
@@ -209,6 +214,7 @@ class FactorAgent:
         )
         if len(tickers) == 1:
             t = tickers[0]
-            return {t: float(closes["Close"].iloc[-1])}  # type: ignore
+            return {t: float(closes[t]["Close"].iloc[-1])}
+            # return {t: float(closes["Close"].iloc[-1])}  # type: ignore
 
         return {t: float(closes[t]["Close"].iloc[-1]) for t in tickers}  # type: ignore

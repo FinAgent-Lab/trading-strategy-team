@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage
 from src.agents.supervisor.state import SupervisorState
 from src.dtos.chat.chatDto import CreateChatDto
 from src.services.chat import ChatService
+from src.services.kis import KisService
 from src.services.user import UserService
 from src.utils.types.ChatType import ChatAgent, ChatRole
 from src.utils.types.PromptType import PromptType
@@ -22,6 +23,7 @@ class TradeAgentService:
     trade_agent: SupervisorGraph
     user_service: UserService
     chat_service: ChatService
+    kis_service: KisService
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -38,6 +40,7 @@ class TradeAgentService:
 
             self.user_service = UserService()
             self.chat_service = ChatService()
+            self.kis_service = KisService()
 
             # Main Trade Agent
             self.trade_agent = SupervisorGraph()
@@ -49,6 +52,8 @@ class TradeAgentService:
             # self.factor_agent = factor_agent_graph()
 
     async def chat_trade_agent(self, room_id: str, user_id: str, input: str):
+
+        access_token = await self.kis_service.get_access_token(user_id)
 
         user_info = await self.user_service.get_user_info(user_id)
 
@@ -64,7 +69,7 @@ class TradeAgentService:
                     "account_number": user_info["account_number"],
                     "app_key": user_info["app_key"],
                     "app_secret": user_info["secret_key"],
-                    "access_token": user_info["access_token"],
+                    "access_token": access_token,
                 },
                 "messages": [PromptType(role=ChatRole.USER, content=input)],
                 "history": history.chats,
