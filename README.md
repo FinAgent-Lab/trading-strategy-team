@@ -7,7 +7,7 @@
 ## 📋 개요
 
 FinAgent Trading Strategy Team은 AI 기반 트레이딩 전략을 자동화하고 백테스트 및 실행까지 지원하는 플랫폼입니다.  
-Nest.js, PostgreSQL, Prisma 기반의 백엔드에 FastAPI로 전략 실행 서버를 구성했습니다.  
+FastAPI, PostgreSQL, Prisma 기반으로 전략 실행 서버를 구성했습니다.  
 OpenAI API와 KIS API를 활용해 전략 생성과 실행을 자동화하고 있습니다.
 
 ---
@@ -26,7 +26,7 @@ OpenAI API와 KIS API를 활용해 전략 생성과 실행을 자동화하고 �
 
 ```
 trading-strategy-team/
-├── src/                  # Nest.js 백엔드 코드
+├── src/                  # Fastapi 백엔드 코드
 ├── prisma/               # Prisma 스키마 및 마이그레이션
 ├── static/charts/        # 전략 결과 차트 이미지
 ├── tests/                # 테스트 코드
@@ -100,7 +100,7 @@ Swagger 문서는 `http://localhost:8000/docs`에서 확인할 수 있습니다.
 
 | 구성 요소   | 기술 스택            |
 |------------|----------------------|
-| 백엔드     | Nest.js, FastAPI     |
+| 백엔드     | FastAPI     |
 | DB         | PostgreSQL, Prisma   |
 | AI         | OpenAI API           |
 | 외부 API   | KIS API              |
