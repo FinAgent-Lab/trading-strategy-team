@@ -2,7 +2,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph
 from langgraph.graph import START, END
 from src.agents.factor.node import FactorAgent
-from src.agents.supervisor.state import SupervisorState
+from src.agents.supervisor.state import State
 from src.config import Global
 
 
@@ -11,7 +11,7 @@ def factor_agent_graph(llm: ChatOpenAI | None = None):
 
     factor_node = FactorAgent(llm)
 
-    graph = StateGraph(SupervisorState)
+    graph = StateGraph(State)
 
     graph.add_node("generate_ast", factor_node.generate_ast)
     graph.add_node("execute_code", factor_node.execute_code)

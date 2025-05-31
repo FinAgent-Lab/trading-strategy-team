@@ -6,16 +6,17 @@ class TradeNestedDto(BaseModel):
     class GetOverseasStockDailyPriceOutput1(BaseModel):
         rsym: str = Field(
             ...,
-            description="""rsym is the stock code. D + market code 3 digits + stock code. ex) DNASAAPL : D + NAS(Nasdaq) + APPL(Apple)""",
+            description="""This is required field. rsym is the stock code. D + market code 3 digits + stock code. ex) DNASAAPL : D + NAS(Nasdaq) + APPL(Apple)""",
         )  # 실시간조회종목코드. D + 시장구분 3자리 + 종목코드. ex) DNASAAPL : D + NAS 나스탁 + APPL 애플
         zdiv: str = Field(
             ...,
             min_length=1,
             max_length=1,
-            description="""zdiv is the number of decimal places.""",
+            description="""This is required field. zdiv is the number of decimal places.""",
         )  # 소수점자리수
         nrec: str = Field(
-            ..., description="""nrec is the previous day's closing price."""
+            ...,
+            description="""This is required field. nrec is the previous day's closing price.""",
         )  # 전일종가
 
     class GetOverseasStockDailyPriceOutput2(BaseModel):
@@ -23,73 +24,73 @@ class TradeNestedDto(BaseModel):
             ...,
             min_length=8,
             max_length=8,
-            description="""xymd is the query date YYYYMMDD""",
+            description="""This is required field. xymd is the query date YYYYMMDD""",
         )  # 조회일자 YYYYMMDD
         clos: str = Field(
             ...,
-            description="""clos is the closing price of the day.""",
+            description="""This is required field. clos is the closing price of the day.""",
         )  # 해당 일자의 종가
         sign: str = Field(
             ...,
             min_length=1,
             max_length=1,
-            description="""sign is the symbol of the comparison. 1: up, 2: up, 3: up, 4: down, 5: down""",
+            description="""This is required field. sign is the symbol of the comparison. 1: up, 2: up, 3: up, 4: down, 5: down""",
         )  # 대비기호. 1: 상한, 2: 상승, 3: 보합, 4: 하락, 5: 하한
         diff: str = Field(
             ...,
-            description="""diff is the difference between the closing price of the day and the previous day's closing price.""",
+            description="""This is required field. diff is the difference between the closing price of the day and the previous day's closing price.""",
         )  # 대비. 해당 일자의 종가와 해당 전일 종가의 차이 (해당일 종가 - 해당 전일 종가)
         rate: str = Field(
             ...,
-            description="""rate is the rate of change. (previous day's closing price / current day's closing price) * 100""",
+            description="""This is required field. rate is the rate of change. (previous day's closing price / current day's closing price) * 100""",
         )  # 등락율. 해당 전일 대비 / 해당일 종가 * 100
         open: str = Field(
             ...,
-            description="""open is the opening price of the day.""",
+            description="""This is required field. open is the opening price of the day.""",
         )  # 시가. 해당일 최초 거래가격
         high: str = Field(
             ...,
-            description="""high is the highest price of the day.""",
+            description="""This is required field. high is the highest price of the day.""",
         )  # 고가. 해당일 가장 높은 거래가격
         low: str = Field(
             ...,
-            description="""low is the lowest price of the day.""",
+            description="""This is required field. low is the lowest price of the day.""",
         )  # 저가. 해당일 가장 낮은 거래가격
         tvol: str = Field(
             ...,
-            description="""tvol is the trading volume of the day.""",
+            description="""This is required field. tvol is the trading volume of the day.""",
         )  # 거래량. 해당일 거래량
         tamt: str = Field(
             ...,
-            description="""tamt is the trading amount of the day.""",
+            description="""This is required field. tamt is the trading amount of the day.""",
         )  # 거래대금. 해당일 거래대금
         pbid: str = Field(
             ...,
-            description="""pbid is the last trading price of the day.""",
+            description="""This is required field. pbid is the last trading price of the day.""",
         )  # 매수호가잔량. 마지막 체결이 발생한 시점의 매수호가 거래량. 해당 일자 거래량이 0인 경우 값이 수신되지 않음.
         pask: str = Field(
             ...,
-            description="""pask is the last selling price of the day.""",
+            description="""This is required field. pask is the last selling price of the day.""",
         )  # 매도호가. 마지막 체결이 발생한 시점의 매도호가. 해당 일자 거래량이 0인 경우 값이 수신되지 않음.
         vask: str = Field(
             ...,
-            description="""vask is the last selling price of the day.""",
+            description="""This is required field. vask is the last selling price of the day.""",
         )  # 매도호가잔량 해당 일자 거래량이 0인 경우 값이 수신되지 않음.
 
     class OrderOverseasStockOutput(BaseModel):
         KRX_FWDG_ORD_ORGNO: str = Field(
             ...,
-            description="""KRX_FWDG_ORD_ORGNO is the KRX forward order organization number.""",
+            description="""This is required field. KRX_FWDG_ORD_ORGNO is the KRX forward order organization number.""",
             max_length=5,
         )  # 한국거래소 전송 주문조직 번호.
         ODNO: str = Field(
             ...,
-            description="""ODNO is the order number.""",
+            description="""This is required field. ODNO is the order number.""",
             max_length=10,
         )  # 주문번호.
         ORD_TMD: str = Field(
             ...,
-            description="""ORD_TMD is the order time(HHMMSS).""",
+            description="""This is required field. ORD_TMD is the order time(HHMMSS).""",
             max_length=6,
         )  # 주문시간(HHMMSS).
 
@@ -97,37 +98,36 @@ class TradeNestedDto(BaseModel):
         ODNO: str = Field(
             ...,
             max_length=10,
-            description="""ODNO is the order number.""",
+            description="""This is required field. ODNO is the order number.""",
         )  # 한국거래소 전송 주문 조직 번호. tr_id가 TTTT3016U(미국 예약 매도 주문)/TTTT3014U(미국 예약 매수 주문)인 경우만 출력.
 
 
 class TradeDto:
     class GetOverseasStockDailyPriceInput(BaseModel):
-        user_id: str
-
+        access_token: str = Field(..., description="This is required field.")
         AUTH: str = Field(
             default="",
-            description="Information of user authorization. AUTH is always an empty string",
+            description="""This is required field. Information of user authorization. AUTH is always an empty string""",
         )  # 사용자권한정보. (""로 설정)
         EXCD: str = Field(
             default="NAS",
-            description="""EXCD should always be "NAS", where "NAS" stands for Nasdaq.""",
+            description="""This is required field. EXCD should always be "NAS", where "NAS" stands for Nasdaq.""",
         )  # 거래소코드. 나스닥 NAS
         SYMB: str = Field(
             default="TSLA",
-            description="""SYMB refers to the stock code. For example, Tesla is TSLA.""",
+            description="""This is required field. SYMB refers to the stock code. For example, Tesla is TSLA.""",
         )  # 중목코드 ex) TSLA
         GUBN: str = Field(
             default="0",
-            description="""GUBN stands for days if "0", weeks if "1", and months if "2".""",
+            description="""This is required field. GUBN stands for days if "0", weeks if "1", and months if "2".""",
         )  # 일/주/월 구분. 0: 일, 1: 주, 2: 월
         BYMD: str = Field(
             default="",
-            description="""BYMD refers to the date of inquiry. For an empty string, it refers to today.""",
+            description="""This is required field. BYMD refers to the date of inquiry. For an empty string, it refers to today.""",
         )  # 조회기준일자 YYYYMMDD(공란시 오늘 날짜로 설정)
         MODP: str = Field(
             default="1",
-            description="""MODP refers to whether or not the revised stock is reflected. 0 means the revised stock is not reflected, and 1 means the revised stock is reflected.""",
+            description="""This is required field. MODP refers to whether or not the revised stock is reflected. 0 means the revised stock is not reflected, and 1 means the revised stock is reflected.""",
         )  # 수정주가반영여부 0: 수정주가 미반영, 1: 수정주가 반영
 
     class GetOverseasStockDailyPriceOutput(BaseModel):
@@ -135,15 +135,15 @@ class TradeDto:
             ...,
             min_length=1,
             max_length=1,
-            description="""rt_cd is '0' for success and other values for failure.""",
+            description="""This is required field. rt_cd is '0' for success and other values for failure.""",
         )  # 성공 실패 여부. 0: 성공. 0 이외의 값 : 실패
         msg_cd: str = Field(
             ...,
-            description="""msg_cd is the response code.""",
+            description="""This is required field. msg_cd is the response code.""",
         )  # 응답 코드.
         msg1: str = Field(
             ...,
-            description="""msg1 is the response message.""",
+            description="""This is required field. msg1 is the response message.""",
         )  # 응답메시지
         output1: Optional[TradeNestedDto.GetOverseasStockDailyPriceOutput1] = Field(
             ...,
@@ -153,25 +153,22 @@ class TradeDto:
         )
 
     class OrderOverseasStockInput(BaseModel):
-        user_id: str = Field(
-            ...,
-            description="""user_id is the user's id.""",
-        )
+        access_token: str = Field(..., description="This is required field.")
         is_buy: bool = Field(
             ...,
-            description="""is_buy is the order type. True: buy, False: sell""",
+            description="""This is required field. is_buy is the order type. True: buy, False: sell""",
         )
-        # CANO: str = Field(
-        #     ...,
-        #     min_length=8,
-        #     max_length=8,
-        #     description="""CANO is the combined account number. The first 8 digits of the account number.""",
-        # )  # 종합계좌번호. 계좌번호 앞 8자리
+        CANO: str = Field(
+            ...,
+            min_length=8,
+            max_length=8,
+            description="""This is required field.CANO is the account number. The first 8 digits of the account number. This is required field.""",
+        )  # 종합계좌번호. 계좌번호 앞 8자리
         ACNT_PRDT_CD: str = Field(
             default="01",
             min_length=2,
             max_length=2,
-            description="""ACNT_PRDT_CD is the account product code. The last 2 digits of the account number. 01: domestic, overseas stocks / 03: domestic futures / 08: overseas futures""",
+            description="""This is required field. ACNT_PRDT_CD is the account product code. The last 2 digits of the account number. 01: domestic, overseas stocks / 03: domestic futures / 08: overseas futures""",
         )  # 계좌상품코드. 계좌번호 뒤 2자리. 01: 국내, 해외주식 / 03: 국내선물 / 08: 해외선물
         OVRS_EXCG_CD: Optional[str] = Field(
             default="NASD",
@@ -180,25 +177,25 @@ class TradeDto:
         PDNO: str = Field(
             ...,
             max_length=12,
-            description="""PDNO is the product number (stock code).""",
+            description="""This is required field. PDNO is the product number (stock code).""",
         )  # 상품번호(종목코드)
         ORD_QTY: str = Field(
             ...,
-            description="""ORD_QTY is the order quantity.""",
+            description="""This is required field. ORD_QTY is the order quantity.""",
         )  # 주문수량
         OVRS_ORD_UNPR: str = Field(
             default="0",
-            description="""OVRS_ORD_UNPR is the overseas order unit price (1 share price). Please check the minimum order quantity and order unit for each overseas exchange. If the order is market price, please set 0.""",
+            description="""This is required field. OVRS_ORD_UNPR is the overseas order unit price (1 share price). Please check the minimum order quantity and order unit for each overseas exchange. If the order is market price, please set 0.""",
         )  # 해외주문단가 (1주당 가격. 해외거래소 별 최소 주문수량 및 주문단위 확인 필요). 시장가의 경우 0으로 설정
         ORD_SVR_DVSN_CD: str = Field(
             default="0",
-            description="""This field is always 0.""",
+            description="""This is required field. This field is always 0.""",
         )  # 주문서버구분코드 ("0" 으로 설정)
         ORD_DVSN: Optional[str] = Field(
             default="00",
             min_length=2,
             max_length=2,
-            description="""ORD_DVSN is the order division. Default is 00.
+            description="""ORD_DVSN is the order division. Default is 00. If ORD_SVR_DVSN_CD is 0, this field is not used.
             ### [Header tr_id TTTT1002U(US Buy Order)]
             00 : Limit Price
             32 : LOO(Limit On Open)
@@ -266,10 +263,7 @@ class TradeDto:
         )
 
     class BookOverseasStockOrderInput(BaseModel):
-        user_id: str = Field(
-            ...,
-            description="""user_id is the user's id.""",
-        )
+        access_token: str = Field(..., description="This is required field.")
         is_buy: bool = Field(
             ...,
             description="""is_buy is the order type. True: buy, False: sell""",
@@ -312,10 +306,6 @@ class TradeDto:
         # ORD_DVSN: str  # tr_id가 TTTT3016U(미국 예약 매도 주문)인 경우만 사용. 00: 지정가, 31: MOO(장개시시장가)
 
     class BookOverseasStockOrderOutput(BaseModel):
-        user_id: str = Field(
-            ...,
-            description="""user_id is the user's id.""",
-        )
         is_buy: bool = Field(
             ...,
             description="""is_buy is the order type. True: buy, False: sell""",
@@ -337,10 +327,7 @@ class TradeDto:
         )
 
     class CancelOverseasStockOrderInput(BaseModel):
-        user_id: str = Field(
-            ...,
-            description="""user_id is the user's id.""",
-        )
+        access_token: str = Field(..., description="This is required field.")
         # CANO: str = Field(
         #     ..., min_length=8, max_length=8
         # )  # 종합계좌번호. 계좌번호 앞 8자리
@@ -355,10 +342,7 @@ class TradeDto:
         )  # 해외예약주문번호
 
     class GetOverseasStockOrderResvListInput(BaseModel):
-        user_id: str = Field(
-            ...,
-            description="""user_id is the user's id.""",
-        )
+        access_token: str = Field(..., description="This is required field.")
         # CANO: str = Field(
         #     ..., min_length=8, max_length=8
         # )  # 종합계좌번호. 계좌번호 앞 8자리

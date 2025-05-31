@@ -192,17 +192,8 @@ class UserService:
             }
         )
 
-        access_token = await prisma.usersecret.find_first_or_raise(
-            where={
-                "user_id": user_id,
-                "deleted_at": None,
-                "key": UserSecretProvider.KIS_ACCESS_TOKEN,
-            }
-        )
-
         return {
             "account_number": user_account.account,
             "app_key": app_key.value,
             "secret_key": secret_key.value,
-            "access_token": access_token.value,
         }

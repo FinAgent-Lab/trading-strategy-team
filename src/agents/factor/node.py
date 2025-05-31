@@ -4,9 +4,8 @@ from langchain_experimental.tools import PythonREPLTool
 from langchain.agents import initialize_agent, AgentType
 import yfinance as yf
 import math
-import pandas as pd
 
-from src.agents.factor.state import FactorAgentState
+from src.agents.supervisor.state import State
 
 
 class FactorAgent:
@@ -23,7 +22,7 @@ class FactorAgent:
         """
         self.llm = llm
 
-    def generate_ast(self, state: FactorAgentState):
+    def generate_ast(self, state: State):
         """
         금융 가설을 IF-THEN-ELSE 형태의 AST로 변환
 
@@ -33,10 +32,6 @@ class FactorAgent:
         Returns:
             AST 딕셔너리
         """
-        # prompt = ChatPromptTemplate.from_messages(
-        #     [
-        #         ("system", LogicPrompt["system"]),
-        #         ("human", LogicPrompt["human"].format(hypothesis=state["hypothesis"])),
         print(
             f"--------------------------------Factor input: {state['common']['messages'][-1]}--------------------------------"
         )
@@ -53,7 +48,7 @@ class FactorAgent:
 
         chain = prompt | self.llm
 
-        hypothesis_dict = state["hypothesis"]
+        hypothesis_dict = state["idea"]["hypothesis"]
         ast = {}
 
         for ticker, hypothesis_list in hypothesis_dict.items():
@@ -62,11 +57,11 @@ class FactorAgent:
                 response = chain.invoke({"hypothesis": hypothesis})
                 ast[ticker].append(response.content)
 
-        state["ast"] = ast
+        state["factor"]["ast"] = ast
 
         return state
 
-    def execute_code(self, state: FactorAgentState):
+    def execute_code(self, state: State):
         """
         AST를 기반으로 Python 코드를 실행하여 알파 신호 계산
 
@@ -78,7 +73,7 @@ class FactorAgent:
         """
         python_tool = PythonREPLTool()
 
-        ast = state["ast"]
+        ast = state["factor"]["ast"]
 
         print(f"Execute Code AST: {ast}")
 
@@ -105,11 +100,11 @@ class FactorAgent:
 
             alpha[ticker] = alpha_signal
 
-        state["alpha"] = alpha
+        state["factor"]["alpha"] = alpha
 
         return state
 
-    def final_output(self, state: FactorAgentState):
+    def final_output(self, state: State):
         """
         개별 알파 신호들을 종합하여 최종 알파 값 계산
         모든 알파 값의 합이 1이 되도록 정규화
@@ -120,7 +115,7 @@ class FactorAgent:
         Returns:
             최종 알파 값 딕셔너리 (합이 1이 되도록 정규화)
         """
-        alpha = state["alpha"]
+        alpha = state["factor"]["alpha"]
 
         print(f"Final Output Alpha: {alpha}")
 
@@ -147,17 +142,17 @@ class FactorAgent:
             for ticker in final_alpha:
                 final_alpha[ticker] = 1.0 / num_tickers
 
-        state["final_alpha"] = final_alpha
+        state["factor"]["final_alpha"] = final_alpha
 
         print(f"Final Output Final Alpha: {final_alpha}")
 
         return state
 
-    def rebalance_value(self, state: FactorAgentState):
+    def rebalance_value(self, state: State):
         """
         포트폴리오 금액기준 리벨런싱
         """
-        target_ratio = state["final_alpha"]
+        target_ratio = state["factor"]["final_alpha"]
         # current_portfolio = state["current_portfolio"]
         current_portfolio = {
             ticker: 100 for ticker in target_ratio.keys()
@@ -174,15 +169,15 @@ class FactorAgent:
 
         print(f"Rebalance Value: {out}")
 
-        state["rebalance_value"] = out
+        state["factor"]["rebalance_value"] = out
 
         return state
 
-    def rebalance_shares(self, state: FactorAgentState):
+    def rebalance_shares(self, state: State):
         """
         포트폴리오 주수 기준 리벨런싱
         """
-        rebalance_value = state["rebalance_value"]
+        rebalance_value = state["factor"]["rebalance_value"]
         prices = self.fetch_prices(list(rebalance_value.keys()))
 
         shares = {}
@@ -195,9 +190,9 @@ class FactorAgent:
 
         print(f"Rebalance Shares: {shares}")
 
-        state["closed_prices"] = prices
+        state["factor"]["closed_prices"] = prices
 
-        state["rebalance_shares"] = shares
+        state["factor"]["rebalance_shares"] = shares
 
         print(
             f"--------------------------------Factor Response: {state['common']['messages'][-1]}--------------------------------\n"
