@@ -1,5 +1,5 @@
 from langchain_openai import ChatOpenAI
-from src.agents.idea.state import IdeaState
+from src.agents.supervisor.state import State
 from src.config import Global
 from src.utils.baseNode import BaseNode
 from langchain_core.prompts import ChatPromptTemplate
@@ -65,10 +65,10 @@ class IdeaNode(BaseNode):
             [("system", self.system_prompt), ("human", "{messages}")]
         )
 
-    async def invoke(self, state: IdeaState) -> IdeaState:
+    async def invoke(self, state: State) -> State:
         prompt = (
             [{"role": "system", "content": self.system_prompt}]
-            + convertChatToPrompt(state["common"]["history"])
+            + convertChatToPrompt(state["common"]["histories"])
             + convertChatToPrompt(state["common"]["messages"])
         )
 
@@ -92,7 +92,7 @@ class IdeaNode(BaseNode):
             )
         )
 
-        state["hypothesis"] = json.loads(messages.content)
+        state["idea"]["hypothesis"] = json.loads(messages.content)
 
         # try:
         #     hypotheses = json.loads(messages.content)

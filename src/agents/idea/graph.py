@@ -1,9 +1,8 @@
-import json
 from langchain_openai import ChatOpenAI
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import StateGraph, START
 from langgraph.graph.state import CompiledStateGraph
+from src.agents.supervisor.state import State
 from src.config import Global
-from src.agents.idea.state import IdeaState
 from src.agents.idea.node import IdeaNode
 from src.utils.graphBuilder import GraphBuilder
 
@@ -13,7 +12,7 @@ class IdeaGraph(GraphBuilder):
     graph: CompiledStateGraph
 
     def __init__(self, llm: ChatOpenAI | None = None):
-        self._builder = StateGraph(IdeaState)
+        self._builder = StateGraph(State)
         self.llm = (
             llm
             if llm
@@ -25,7 +24,7 @@ class IdeaGraph(GraphBuilder):
         self._builder.add_node("generate_hypothesis", IdeaNode(self.llm))
         self._builder.add_edge(START, "generate_hypothesis")
 
-        # def should_continue(state: IdeaState) -> str:
+        # def should_continue(state: State) -> str:
         #     iteration_count = state.get("iteration_count")
         #     if iteration_count is None:
         #         iteration_count = 0
@@ -55,14 +54,6 @@ class IdeaGraph(GraphBuilder):
     def get_edges(self) -> list[tuple[str, str]]:
         return self._builder.edges()
 
-    async def invoke(self, state: IdeaState):
-
-        print(
-            f"--------------------------------Idea input: {state['common']['messages'][-1]}--------------------------------"
-        )
-        response: IdeaState = await self.graph.ainvoke(state)
-        state["hypothesis"] = response["hypothesis"]
-        print(
-            f"--------------------------------Idea response: {response['common']['messages'][-1]}--------------------------------\n"
-        )
-        return state
+    async def invoke(self, state: State):
+        response: State = await self.graph.ainvoke(state)
+        return response

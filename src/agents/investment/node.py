@@ -1,19 +1,20 @@
 import json
 from fastapi import HTTPException
+from langchain_core.messages import AIMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import Tool
+from src.agents.investment.prompt import investment_prompt
+from src.agents.supervisor.state import State
 from src.services.chat import ChatService
-from src.agents.investment.state import InvestmentState
 from src.config import Global
 from src.utils.baseNode import BaseNode
-from langchain_core.messages import ToolCall
+from langchain_core.messages import ToolCall, BaseMessage
 from src.agents.tools.kisTool import (
     get_overseas_stock_daily_price,
     order_overseas_stock,
     book_overseas_stock_order,
     cancel_overseas_stock_order,
     get_overseas_stock_order_resv_list,
-    update_access_token,
 )
 from src.utils.functions.convertChatToPrompt import convertChatToPrompt
 from src.utils.types.ChatType import ChatRole
@@ -27,45 +28,16 @@ class InvestmentNode(BaseNode):
         self.chat_service = ChatService()
 
         self.llm = (
-            lambda: (
-                llm
-                if llm
-                else ChatOpenAI(
-                    model="gpt-4o-mini",
-                    api_key=Global.env.OPENAI_API_KEY,
-                )
+            llm
+            if llm
+            else ChatOpenAI(
+                model="gpt-4o-mini",
+                api_key=Global.env.OPENAI_API_KEY,
             )
-        )()
-        self.system_prompt = "\n".join(
-            [
-                "Please respond in the same language as the user's input.",
-                "You are a trading assistant AI. Your job is to understand the user's intent, decide if any tool should be executed, and respond accordingly.",
-                "If a tool call is needed, call the appropriate tool with accurate arguments. Then, based on the result of the tool, either:",
-                "- Return a final answer to the user, or",
-                "- Decide if another tool should be called.",
-                "You must never transform the tool result. Just forward the result or decide what to do next.",
-                "Never call the same tool more than once. Always think twice before calling a tool.",
-                "If you plan to call a tool, but some required arguments are missing:",
-                "- First, check if the missing values can be obtained by calling another available tool.",
-                "- If possible, call the necessary tool to obtain the missing values first, before asking the user.",
-                "- Only if no tool can provide the missing values, you MUST ask the user for those missing values in the assistant's content message.",
-                "Think one more time before calling a tool.",
-                # "If you plan to execute a tool and all required arguments are present, DO NOT include any message in the assistant's content. Just return the tool call.",
-                # "If you plan to execute a tool and some required arguments are missing, you MUST ask the user for those missing values in the assistant's content message.",
-            ]
         )
-        # self.prompt_template = ChatPromptTemplate.from_messages(
-        #     [("system", self.system_prompt), ("human", "{messages}")]
-        # )
+        self.system_prompt = investment_prompt
 
         self.tools = [
-            Tool(
-                name=update_access_token.name,
-                description=update_access_token.__doc__,
-                func=update_access_token,
-                coroutine=update_access_token.arun,
-                args_schema=update_access_token.args_schema,
-            ),
             # Tool(
             #     name=get_overseas_stock_daily_price.name,
             #     description=get_overseas_stock_daily_price.__doc__,
@@ -73,13 +45,7 @@ class InvestmentNode(BaseNode):
             #     coroutine=get_overseas_stock_daily_price.arun,
             #     args_schema=get_overseas_stock_daily_price.args_schema,
             # ),
-            Tool(
-                name=order_overseas_stock.name,
-                description=order_overseas_stock.__doc__,
-                func=order_overseas_stock,
-                coroutine=order_overseas_stock.arun,
-                args_schema=order_overseas_stock.args_schema,
-            ),
+            order_overseas_stock,
             # Tool(
             #     name=book_overseas_stock_order.name,
             #     description=book_overseas_stock_order.__doc__,
@@ -105,32 +71,23 @@ class InvestmentNode(BaseNode):
 
         self.llm_with_tools = self.llm.bind_tools(self.tools)
 
-    async def invoke(self, state: InvestmentState):
-        room_id = state["common"]["room"]["id"]
-        user_id = state["common"]["user"]["id"]
-
-        history = convertChatToPrompt(state["common"]["history"]) + convertChatToPrompt(
-            state["common"]["messages"]
-        )
-
-        # # print history
-        # print("--------------------------------history--------------------------------")
-
-        # for h in history:
-        #     print(f"{h['role']}: {h['content']}")
-        # print("-----------------------------------------------------------------------")
+    async def invoke(self, state: State):
+        history = convertChatToPrompt(
+            state["common"]["histories"]
+        ) + convertChatToPrompt(state["common"]["messages"])
 
         prompt = [
+            *self.system_prompt(state),
             {
                 "role": "system",
                 "content": "".join(
                     [
-                        self.system_prompt,
-                        "\n\n",
-                        f"The user_id is {user_id}, room_id is {room_id}",
+                        f"Access Token: {state['common']['access_token']}",
+                        "",
+                        f"Account: {state['common']['account']}",
                     ]
                 ),
-            }
+            },
         ] + history
 
         messages = await self.llm_with_tools.ainvoke(prompt)
@@ -138,6 +95,32 @@ class InvestmentNode(BaseNode):
         print("\n\n----------------------messages-------------------------")
         print(messages)
         print("------------------------------------------------------\n\n")
+
+        response = await self.process_response(messages)
+
+        print("Investment Node Response:")
+        print(response.content)
+        print()
+
+        if isinstance(response, list):
+            for tool_message in response:
+                state["common"]["messages"].append(
+                    PromptType(
+                        role=ChatRole.ASSISTANT,
+                        content=tool_message.content,
+                    )
+                )
+
+            return state
+
+        state["common"]["messages"].append(
+            PromptType(
+                role=ChatRole.ASSISTANT,
+                content=response.content,
+            )
+        )
+
+        return state
 
         tool_call_results: list = []
 
@@ -230,6 +213,33 @@ class InvestmentNode(BaseNode):
 
         return state
 
+    async def process_response(self, message: BaseMessage):
+        print(f"Tool Calls: {message.tool_calls}")
+
+        tool_call_results: list[ToolMessage] = []
+
+        for tool_call in message.tool_calls:
+            res = await self.execute_tool_call(tool_call)
+            tool_call_results.append(
+                ToolMessage(
+                    content=json.dumps(res),
+                    tool_call_id=tool_call["id"],
+                    name=tool_call["name"],
+                )
+            )
+            print(
+                ToolMessage(
+                    content=json.dumps(res),
+                    tool_call_id=tool_call["id"],
+                    name=tool_call["name"],
+                )
+            )
+
+        if len(tool_call_results) > 0:
+            return tool_call_results
+
+        return message
+
     async def execute_tool_call(self, tool_call: ToolCall):
         tool_name = tool_call["name"]
         tool_input = tool_call["args"]
@@ -247,7 +257,7 @@ class InvestmentNode(BaseNode):
                 print("validated_args")
                 print(validated_args.model_dump())
 
-                return await tool.coroutine(validated_args.model_dump())  # 핵심...!(?)
+                return await tool.coroutine(validated_args.input)  # 핵심...!(?)
         except Exception as e:
             print(e.__str__())
             raise HTTPException(status_code=400, detail=e.__str__())

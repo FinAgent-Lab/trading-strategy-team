@@ -1,3 +1,8 @@
+from src.agents.supervisor.state import State
+from src.utils.types.ChatType import ChatRole
+from src.utils.types.PromptType import PromptType
+
+
 class ChartAnalysisPrompt:
     system_prompt = "\n".join(
         [
@@ -9,3 +14,7 @@ class ChartAnalysisPrompt:
             "주어진 도구들을 사용하여 분석을 수행하세요.",
         ]
     )
+
+
+def chart_analysis_prompt(state: State):
+    return [PromptType(role=ChatRole.SYSTEM, content=ChartAnalysisPrompt.system_prompt)]
