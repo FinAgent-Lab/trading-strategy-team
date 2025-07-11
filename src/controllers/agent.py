@@ -2,45 +2,23 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path
 from src.guards.jwtGuard import jwt_guard
 from src.dtos.tradingAgent.chatDto import TradingAgentChatDto
-from src.services.tradingAgent import TradingAgentService
+from src.services.tradeAgent import TradeAgentService
 from src.services.chartAnalysis import ChartAnalysisService
 from src.dtos.chartAnalysis.analysisDto import ChartAnalysisRequest
 from src.services.kis import KisService
-from langchain_core.tools import tool, Tool
+from langchain_core.tools import tool
 
-agent_router = router = APIRouter(prefix="/agent")
+agent_router = router = APIRouter()
 
 kis_service = KisService()
 
 
-@tool
-def get_stock_data(input: dict):
-    """해외 주식 일별 시세를 조회합니다."""
-    return kis_service.get_overseas_stock_daily_price(input)
-
-
-# @router.post("/trading/chat")
-# async def chat_trading_agent(
-#     input: TradingAgentChatDto,
-#     trading_agent_service: TradingAgentService = Depends(lambda: TradingAgentService()),
-# ):
-#     return trading_agent_service.chat_trading_agent(input.message)
-
-
-# @router.post("/practice/chat", tags=["practice"])
-# async def chat_practice_agent(
-#     input: TradingAgentChatDto,
-#     practice_agent_service: PracticeService = Depends(lambda: PracticeService()),
-# ):
-#     return practice_agent_service.chat_practice_agent(input.message)
-
-
-@router.post("/trade/room/{room_id}/chat", tags=["trade"])
+@router.post("/trade/room/{room_id}/chat")
 async def chat_trade_agent(
     room_id: Annotated[str, Path()],
     user_id: Annotated[str, Depends(jwt_guard)],
     input: TradingAgentChatDto,
-    trade_agent_service: TradingAgentService = Depends(lambda: TradingAgentService()),
+    trade_agent_service: TradeAgentService = Depends(lambda: TradeAgentService()),
 ):
 
     return await trade_agent_service.chat_trade_agent(room_id, user_id, input.message)
@@ -57,3 +35,35 @@ async def analyze_stock_chart(
     return chart_analysis_service.analyze_stock(
         symbol=input.symbol, exchange=input.exchange
     )
+
+
+@router.post("/investment/room/{room_id}/chat", tags=["investment"])
+async def chat_investment_agent(
+    room_id: Annotated[str, Path()],
+    user_id: Annotated[str, Depends(jwt_guard)],
+    input: TradingAgentChatDto,
+    trade_agent_service: TradeAgentService = Depends(lambda: TradeAgentService()),
+):
+    return await trade_agent_service.chat_investment_agent(
+        room_id, user_id, input.message
+    )
+
+
+@router.post("/idea/room/{room_id}/chat", tags=["idea"])
+async def chat_idea_agent(
+    room_id: Annotated[str, Path()],
+    user_id: Annotated[str, Depends(jwt_guard)],
+    input: TradingAgentChatDto,
+    trade_agent_service: TradeAgentService = Depends(lambda: TradeAgentService()),
+):
+    return await trade_agent_service.chat_idea_agent(room_id, user_id, input.message)
+
+
+@router.post("/factor/room/{room_id}/chat", tags=["factor"])
+async def chat_factor_agent(
+    room_id: Annotated[str, Path()],
+    user_id: Annotated[str, Depends(jwt_guard)],
+    input: TradingAgentChatDto,
+    trade_agent_service: TradeAgentService = Depends(lambda: TradeAgentService()),
+):
+    return await trade_agent_service.chat_factor_agent(room_id, user_id, input.message)

@@ -4,7 +4,7 @@ from src.guards.jwtGuard import jwt_guard
 from typing import Annotated
 from src.dtos.chat.roomDto import CreateRoomDto
 
-chat_router = router = APIRouter(prefix="/chat", tags=["chat"])
+chat_router = router = APIRouter()
 
 
 @router.post("/room")

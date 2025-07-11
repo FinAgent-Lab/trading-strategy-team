@@ -6,7 +6,7 @@ from src.services.user import UserService
 from src.dtos.user.signDto import SignInDto, SignUpDto
 from src.dtos.user.secretDto import CreateSecretDto
 
-user_router = router = APIRouter(prefix="/user", tags=["User"])
+user_router = router = APIRouter()
 
 
 @router.post("/sign-up")

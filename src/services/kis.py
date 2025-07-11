@@ -46,6 +46,14 @@ class KisService:
             },
         )
 
+        if access_token:
+            updated_at = datetime.fromisoformat(access_token.updated_at.isoformat())
+            now = datetime.now(timezone.utc)
+            hours_diff = (now - updated_at).total_seconds() / 3600
+
+            if hours_diff >= 12:
+                return await self.update_access_token(user_id)
+
         return (
             access_token.value
             if access_token
@@ -100,6 +108,11 @@ class KisService:
         if type(body) == str:
             raise HTTPException(status_code=400, detail="KIS 액세스 토큰 발급 실패")
 
+        print("update access token")
+        print(user_id)
+        print("body")
+        print(body)
+
         await prisma.usersecret.upsert(
             where={
                 "key_user_id": {
@@ -131,13 +144,11 @@ class KisService:
         해외 주식 기간별 시세
         """
 
-        access_token = await self.get_access_token(input.user_id)
-
         try:
             response = requests.get(
                 url=f"{self.url}/uapi/overseas-price/v1/quotations/dailyprice",
                 headers={
-                    "Authorization": f"Bearer {access_token}",
+                    "Authorization": f"Bearer {input.access_token}",
                     "appkey": Global.env.KIS_APP_KEY,
                     "appsecret": Global.env.KIS_SECRET_KEY,
                     "tr_id": "HHDFS76240000",
@@ -166,34 +177,19 @@ class KisService:
 
         trade = TRADE_ID["usa"]["buy"] if input.is_buy else TRADE_ID["usa"]["sell"]
 
-        access_token = await self.get_access_token(input.user_id)
-
-        account = await prisma.useraccount.find_first(
-            where={
-                "user_id": input.user_id,
-                "provider": UserAccountProvider.KIS,
-                "deleted_at": None,
-            },
-        )
-
         payload = input.model_dump()
-        del payload["user_id"]
-        del payload["is_buy"]
 
-        payload["CANO"] = account.account
+        del payload["is_buy"]
 
         print(f"🔹 payload: {payload}")
         print(f"🔹 trade: {trade}")
-
-        if not account:
-            raise HTTPException(status_code=400, detail="KIS 계좌가 존재하지 않습니다.")
 
         try:
             response = requests.post(
                 url=f"{self.url}/uapi/overseas-stock/v1/trading/order",
                 headers={
                     "Content-Type": "application/json; charset=UTF-8",
-                    "Authorization": f"Bearer {access_token}",
+                    "Authorization": f"Bearer {input.access_token}",
                     "appkey": Global.env.KIS_APP_KEY,
                     "appsecret": Global.env.KIS_SECRET_KEY,
                     "tr_id": trade,
@@ -201,9 +197,15 @@ class KisService:
                 json=payload,
             )
 
-            return response.json()
+            res = response.json()
+
+            if res["rt_cd"] != "0":
+                raise HTTPException(
+                    status_code=400, detail=res["msg_cd"] + ": " + res["msg1"]
+                )
+
+            return res
         except Exception as e:
-            print(e)
             raise e
 
     async def book_overseas_stock_order(
@@ -216,14 +218,12 @@ class KisService:
 
         trade = TRADE_ID["usa"]["buy"] if input.is_buy else TRADE_ID["usa"]["sell"]
 
-        access_token = await self.get_access_token(input.user_id)
-
         try:
             response = requests.post(
                 url=f"{self.url}/uapi/overseas-stock/v1/trading/order-resv",
                 headers={
                     "Content-Type": "application/json; charset=UTF-8",
-                    "Authorization": f"Bearer {access_token}",
+                    "Authorization": f"Bearer {input.access_token}",
                     "appkey": Global.env.KIS_APP_KEY,
                     "appsecret": Global.env.KIS_SECRET_KEY,
                     "tr_id": trade,
@@ -246,14 +246,12 @@ class KisService:
 
         trade = TRADE_ID["usa"]["book_cancel"]
 
-        access_token = await self.get_access_token(input.user_id)
-
         try:
             response = requests.post(
                 url=f"{self.url}/uapi/overseas-stock/v1/trading/order-resv-ccnl",
                 headers={
                     "Content-Type": "application/json; charset=UTF-8",
-                    "Authorization": f"Bearer {access_token}",
+                    "Authorization": f"Bearer {input.access_token}",
                     "appkey": Global.env.KIS_APP_KEY,
                     "appsecret": Global.env.KIS_SECRET_KEY,
                     "tr_id": trade,
@@ -276,14 +274,12 @@ class KisService:
 
         trade = TRADE_ID["usa"]["order_resv_list"]
 
-        access_token = await self.get_access_token(input.user_id)
-
         try:
             response = requests.get(
                 url=f"{self.url}/uapi/overseas-stock/v1/trading/order-resv-list",
                 headers={
                     "Content-Type": "application/json; charset=UTF-8",
-                    "Authorization": f"Bearer {access_token}",
+                    "Authorization": f"Bearer {input.access_token}",
                     "appkey": Global.env.KIS_APP_KEY,
                     "appsecret": Global.env.KIS_SECRET_KEY,
                     "tr_id": trade,

@@ -6,29 +6,6 @@ kis_service = KisService()
 
 
 @tool
-async def get_access_token(
-    user_id: str,
-) -> str:
-    """
-    # Get access token
-    """
-
-    return await kis_service.get_access_token(user_id)
-
-
-@tool
-async def update_access_token(
-    user_id: str,
-) -> str:
-    """
-    # Update access token
-    If the access token is expired or occured error because of access token, you can update it by calling this tool.
-    """
-
-    return await kis_service.update_access_token(user_id)
-
-
-@tool
 async def get_overseas_stock_daily_price(
     input: TradeDto.GetOverseasStockDailyPriceInput,
 ) -> TradeDto.GetOverseasStockDailyPriceOutput:
