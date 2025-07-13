@@ -1,0 +1,37 @@
+name: 🚀 Deploy to Self-Hosted Server (Develop)
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure jq is installed
+        run: |
+          if ! command -v jq &> /dev/null; then
+            echo "jq not found. Installing..."
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+
+      - name: Generate .env from secrets
+        env:
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+        run: |
+          echo "$SECRETS_CONTEXT" | jq -r 'to_entries | map("\(.key)=\(.value|tostring)") | .[]' > .env
+
+      - name: Build and run docker-compose
+        run: |
+          docker compose down --remove-orphans
+          docker compose -f docker-compose.ymlup -d
+
+      - name: Clean up .env
+        run: rm -f .env
