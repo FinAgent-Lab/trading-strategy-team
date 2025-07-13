@@ -31,7 +31,7 @@ jobs:
       - name: Build and run docker-compose
         run: |
           docker compose down --remove-orphans
-          docker compose -f docker-compose.ymlup -d
+          docker compose -f docker-compose.yml up -d
 
       - name: Clean up .env
         run: rm -f .env
