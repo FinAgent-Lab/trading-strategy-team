@@ -1,0 +1,29 @@
+model Room {
+  id         String    @id @db.Uuid
+  name       String    @default("New Chat") @db.VarChar
+  created_at DateTime  @db.Timestamptz()
+  updated_at DateTime  @updatedAt @db.Timestamptz()
+  deleted_at DateTime? @db.Timestamptz()
+
+  user_id String @db.Uuid
+
+  user User @relation(fields: [user_id], references: [id])
+
+  Chat Chat[]
+}
+
+model Chat {
+  id         String    @id @db.Uuid
+  room_id    String    @db.Uuid
+  content    String    @db.VarChar
+  role       String    @db.VarChar /// "user" or "assistant" or "system"
+  agent      String    @db.VarChar /// agent name. However if human say, it will be "human". If system, it will be "system"
+  created_at DateTime  @db.Timestamptz()
+  updated_at DateTime  @updatedAt @db.Timestamptz()
+  deleted_at DateTime? @db.Timestamptz()
+
+  user_id String @db.Uuid
+
+  user User @relation(fields: [user_id], references: [id])
+  room Room @relation(fields: [room_id], references: [id])
+}

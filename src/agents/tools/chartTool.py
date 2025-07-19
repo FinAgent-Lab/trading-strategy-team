@@ -4,6 +4,7 @@ from src.services.kis import KisService
 
 kis_service = KisService()
 
+
 @tool
 def get_overseas_stock_daily_price(
     input: TradeDto.GetOverseasStockDailyPriceInput,

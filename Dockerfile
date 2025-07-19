@@ -28,5 +28,10 @@ RUN poetry install --no-root
 # 로컬의 src 디렉토리를 컨테이너의 /app/src로 복사
 COPY src /app/src
 
+# Prisma 설정
+COPY prisma /app/prisma
+
+RUN poetry run prisma generate --schema=./prisma
+
 # uvicorn을 사용하여 main.py를 실행
 CMD ["poetry", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,4 +1,3 @@
-from config import Global
-from src.agents.tradingAgent import TradingAgent
+from prisma import Prisma
 
-url = Global.env.DATABASE_URL
+prisma = Prisma()
