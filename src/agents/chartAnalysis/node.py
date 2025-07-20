@@ -18,7 +18,7 @@ from src.agents.tools.chartTool import get_overseas_stock_daily_price
 from src.utils.functions.convertChatToPrompt import convertChatToPrompt
 from src.utils.types.ChatType import ChatRole
 from src.utils.types.PromptType import PromptType
-
+import pandas_ta as ta
 
 # Tool의 입력 스키마 정의
 class GetStockDataInput(BaseModel):
@@ -75,104 +75,120 @@ class ChartAnalysisAgent(BaseNode):
     #     response = self.kis_service.get_overseas_stock_daily_price(input_dict)
     #     return response
 
-    async def analyze_chart(self, state: State) -> str:
+    async def analyze_chart(self, symbol: str, exchange: str) -> str:
         try:
-            symbol = state["symbol"]
-            exchange = state["exchange"]
-            print(
-                f"[ChartAnalysis] 차트 분석 시작 - 심볼: {symbol}, 거래소: {exchange}\n"
-            )
-
+            print(f"[ChartAnalysis] 차트 분석 시작 - 심볼: {symbol}, 거래소: {exchange}")
+            
             # KisService에서 access_token 가져오기
-            # print("[ChartAnalysis] access_token 요청 중...")
-            # access_token = self.kis_service.get_access_token()
-            # print(
-            #     f"[ChartAnalysis] access_token 획득 완료: {access_token[:20]}..."
-            # )  # 토큰의 앞부분만 출력
-            # access_token = state["common"]["user"]["access_token"]
-
+            print("[ChartAnalysis] access_token 요청 중...")
+            access_token = self.kis_service.get_access_token()
+            print(f"[ChartAnalysis] access_token 획득 완료: {access_token[:20]}...")  # 토큰의 앞부분만 출력
+            
             # Tool 입력 생성
-            print("[ChartAnalysis] 주가 데이터 요청 준비 중...\n")
+            print("[ChartAnalysis] 주가 데이터 요청 준비 중...")
             tool_input = {
                 "input": {
-                    "access_token": state["common"]["access_token"],
+                    "access_token": access_token,
                     "AUTH": "",
                     "EXCD": exchange,
                     "SYMB": symbol,
                     "GUBN": "0",
                     "BYMD": "",
-                    "MODP": "0",
+                    "MODP": "0"
                 }
             }
-            print(
-                "[ChartAnalysis] 입력 데이터 구성 완료\n"
-            )  # 보안을 위해 전체 입력 데이터는 출력하지 않음
-
+            print("[ChartAnalysis] 입력 데이터 구성 완료")
+            
             # Tool 직접 호출
-            print("[ChartAnalysis] KIS API 호출 중...\n")
-            result = await get_overseas_stock_daily_price(tool_input)
-            print("[ChartAnalysis] KIS API 응답 수신\n")
-            # print(f"[ChartAnalysis] 응답 데이터: {result}")
-
-            if result.get("rt_cd") != "0":
+            print("[ChartAnalysis] KIS API 호출 중...")
+            result = get_overseas_stock_daily_price(tool_input)
+            print("[ChartAnalysis] KIS API 응답 수신")
+            print(f"[ChartAnalysis] 응답 데이터: {result}")
+            
+            if result.get('rt_cd') != '0':
                 raise Exception(f"API 오류: {result.get('msg1', '알 수 없는 오류')}")
-
-            # 데이터프레임 변환 및 분석
-            print("[ChartAnalysis] 데이터 분석 시작...\n")
-            output2_list = result.get("output2", [])
+                
+            output2_list = result.get('output2', [])
             if output2_list and len(output2_list) > 0:
-                # 모든 데이터를 리스트로 변환
                 data_list = []
                 for output2 in output2_list:
-                    date_str = output2["xymd"]
+                    date_str = output2['xymd']
                     formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
+                    data_list.append({
+                        'date': formatted_date,
+                        'close': float(output2['clos']),
+                        'open': float(output2['open']),
+                        'high': float(output2['high']),
+                        'low': float(output2['low']),
+                        'volume': int(output2['tvol'])
+                    })
 
-                    data_list.append(
-                        {
-                            "date": formatted_date,
-                            "close": float(output2["clos"]),
-                            "open": float(output2["open"]),
-                            "high": float(output2["high"]),
-                            "low": float(output2["low"]),
-                            "volume": int(output2["tvol"]),
-                        }
-                    )
-
-                # 전체 데이터로 데이터프레임 생성
                 data = pd.DataFrame(data_list)
-                print(f"[ChartAnalysis] 데이터프레임 생성 완료 (총 {len(data)} 행):\n")
-                print(f"[ChartAnalysis] 최근 5일 데이터:\n{data.head()}\n")
+                data["date"] = pd.to_datetime(data["date"])
+                data.sort_values("date", inplace=True)
 
-                # 분석 프롬프트에도 전체 데이터 반영
+                # ✅ SMA 계산 추가
+                data["SMA_5"] = ta.sma(data["close"], length=5)
+                data["SMA_20"] = ta.sma(data["close"], length=20)
+                data["SMA_60"] = ta.sma(data["close"], length=60)
+                # ✅ RSI 계산 추가 (14일 기준)
+                data["RSI_14"] = ta.rsi(data["close"], length=14)
+                # ✅ MACD 계산 추가 (기본 설정: fast=12, slow=26, signal=9)
+                macd = ta.macd(data["close"])
+                data["MACD"] = macd["MACD_12_26_9"]
+                data["MACD_signal"] = macd["MACDs_12_26_9"]
+                data["MACD_hist"] = macd["MACDh_12_26_9"]
+
+                # ✅ 볼린저 밴드 계산 (기본: 20일 기준, 2표준편차)
+                bbands = ta.bbands(data["close"], length=20, std=2)
+                data["BB_upper"] = bbands["BBU_20_2.0"]
+                data["BB_middle"] = bbands["BBM_20_2.0"]
+                data["BB_lower"] = bbands["BBL_20_2.0"]
+
+                # ✅ ADX (Average Directional Index) 계산 (기본: 14일 기준)
+                adx = ta.adx(high=data["high"], low=data["low"], close=data["close"], length=14)
+                data["ADX_14"] = adx["ADX_14"]
+
+                print(f"[ChartAnalysis] 데이터프레임 생성 완료 (총 {len(data)} 행):")
+                print(f"[ChartAnalysis] 최근 5일 데이터:\n{data.tail()}")
+
                 analysis_prompt = f"""
-                {symbol} 주식의 최근 {len(data)}일간의 거래 데이터입니다:
-                
-                최근 종가: ${data['close'].iloc[0]:,.2f}
+                {symbol} 주식의 최근 {len(data)}일간의 거래 및 기술 지표 데이터입니다:
+
+                최근 종가: ${data['close'].iloc[-1]:,.2f}
                 최고가: ${data['high'].max():,.2f}
                 최저가: ${data['low'].min():,.2f}
                 평균 거래량: {int(data['volume'].mean()):,}
-                
-                이 데이터를 기반으로 기술적 분석을 수행하고, 다음 사항들을 포함하여 분석해주세요:
-                1. 최근 {len(data)}일간의 가격 추세와 거래량 패턴
-                2. 주요 가격 레벨과 지지/저항 구간
-                3. 단기 매매 관점에서의 투자 위험도
-                4. 향후 가격 움직임에 대한 전망
+                RSI(14일): {data['RSI_14'].iloc[-1]:.2f}
+                MACD: {data['MACD'].iloc[-1]:.2f}, Signal: {data['MACD_signal'].iloc[-1]:.2f}, Hist: {data['MACD_hist'].iloc[-1]:.2f}
+                볼린저 밴드(20일): 상단 {data['BB_upper'].iloc[-1]:.2f}, 중단 {data['BB_middle'].iloc[-1]:.2f}, 하단 {data['BB_lower'].iloc[-1]:.2f}
+                ADX(14일): {data['ADX_14'].iloc[-1]:.2f}
+
+                최근 10일 데이터 (기술 지표 포함):
+                {data[['date', 'close', 'SMA_5', 'SMA_20', 'SMA_60', 'RSI_14', 'MACD', 'MACD_signal', 'MACD_hist', 'BB_upper', 'BB_middle', 'BB_lower', 'ADX_14']].tail(10).to_string(index=False)}
+
+                다음 내용을 중심으로 기술적 분석을 수행해주세요:
+                1. 가격 추세와 이동평균선 분석 (골든/데드크로스 포함)
+                2. RSI 기반 과매수/과매도 구간 판단
+                3. MACD 히스토그램 및 시그널선 교차 분석
+                4. 볼린저 밴드를 활용한 변동성 판단 및 현재 위치 평가
+                5. ADX 수치를 기반으로 현재 추세 강도 진단
+                6. 주요 지지/저항 구간과 향후 주가 움직임 예측
                 """
-                print("[ChartAnalysis] 프롬프트 생성 완료\n")
 
-                # AI 분석 수행
-                print("[ChartAnalysis] AI 분석 수행 중...\n")
+                print("[ChartAnalysis] 프롬프트 생성 완료")
+                print("[ChartAnalysis] AI 분석 수행 중...")
                 analysis_result = self.llm.invoke(analysis_prompt)
-                print("[ChartAnalysis] AI 분석 완료\n")
+                print("[ChartAnalysis] AI 분석 완료")
 
-                return analysis_result.content
+                return analysis_result
             else:
-                print("[ChartAnalysis] 오류: output2 데이터가 없습니다\n")
+                print("[ChartAnalysis] 오류: output2 데이터가 없습니다")
                 return "주가 데이터를 가져오는데 실패했습니다."
-
+            
         except Exception as e:
             error_msg = f"[ChartAnalysis] 오류 발생: {str(e)}"
-            print(error_msg, "\n")
+            print(error_msg)
             return error_msg
 
     def execute_tool_call(self, tool_call: ToolCall) -> str:
