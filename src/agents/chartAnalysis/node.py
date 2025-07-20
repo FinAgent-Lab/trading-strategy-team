@@ -1,4 +1,3 @@
-import json
 from fastapi import HTTPException
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,12 +5,11 @@ from langchain_openai import ChatOpenAI
 from langchain_core.tools import Tool
 from langchain.schema import SystemMessage, HumanMessage
 from src.config import Global
-from src.agents.chartAnalysis.state import ChartAnalysisState
+from src.agents.supervisor.state import State
 from src.utils.baseNode import BaseNode
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import ToolCall
 import requests
-from src.services.kis import KisService
 from src.agents.chartAnalysis.prompt import ChartAnalysisPrompt
 from typing import List
 from pydantic import BaseModel, Field
@@ -40,13 +38,16 @@ class ChartAnalysisAgent(BaseNode):
     prompt_template: ChatPromptTemplate
     tools: List[Tool]
 
-    def __init__(self):
-        self.llm = ChatOpenAI(model="gpt-4o-mini", api_key=Global.env.OPENAI_API_KEY)
+    def __init__(self, llm: ChatOpenAI | None = None):
+        self.llm = (
+            llm
+            if llm
+            else ChatOpenAI(model="gpt-4o-mini", api_key=Global.env.OPENAI_API_KEY)
+        )
         self.system_prompt = ChartAnalysisPrompt.system_prompt
         self.prompt_template = ChatPromptTemplate.from_messages(
             [("system", self.system_prompt), ("human", "{input}")]
         )
-        self.kis_service = KisService()
 
         # Tools
         self.tools = [
@@ -74,7 +75,7 @@ class ChartAnalysisAgent(BaseNode):
     #     response = self.kis_service.get_overseas_stock_daily_price(input_dict)
     #     return response
 
-    async def analyze_chart(self, state: ChartAnalysisState) -> str:
+    async def analyze_chart(self, state: State) -> str:
         try:
             symbol = state["symbol"]
             exchange = state["exchange"]
@@ -94,14 +95,13 @@ class ChartAnalysisAgent(BaseNode):
             print("[ChartAnalysis] 주가 데이터 요청 준비 중...\n")
             tool_input = {
                 "input": {
-                    # "access_token": access_token,  # 응답 전체를 access_token으로 사용
+                    "access_token": state["common"]["access_token"],
                     "AUTH": "",
                     "EXCD": exchange,
                     "SYMB": symbol,
                     "GUBN": "0",
                     "BYMD": "",
                     "MODP": "0",
-                    "user_id": state["common"]["user"]["id"],
                 }
             }
             print(
@@ -190,18 +190,16 @@ class ChartAnalysisNode(BaseNode):
     agent: ChartAnalysisAgent
 
     def __init__(self, llm: ChatOpenAI | None = None):
-        self.agent = ChartAnalysisAgent()
+        self.agent = ChartAnalysisAgent(llm)
 
         self.llm = (
-            lambda: (
-                llm
-                if llm
-                else ChatOpenAI(
-                    model="gpt-4o-mini",
-                    api_key=Global.env.OPENAI_API_KEY,
-                )
+            llm
+            if llm
+            else ChatOpenAI(
+                model="gpt-4o-mini",
+                api_key=Global.env.OPENAI_API_KEY,
             )
-        )()
+        )
 
         self.system_prompt = "\n".join(
             [
@@ -247,7 +245,7 @@ class ChartAnalysisNode(BaseNode):
 
         self.llm_with_tools = self.llm.bind_tools(self.tools)
 
-    def fetch_stock_data(self, state: ChartAnalysisState):
+    def fetch_stock_data(self, state: State):
         headers = {
             "authorization": f"Bearer {state['common']['user']['access_token']}",
             "appkey": state["common"]["user"]["app_key"],
@@ -288,7 +286,7 @@ class ChartAnalysisNode(BaseNode):
         else:
             raise Exception(f"API 요청 실패: {response.status_code}")
 
-    def analyze_chart(self, state: ChartAnalysisState):
+    def analyze_chart(self, state: State):
         prompt = f"""
         다음은 {state['symbol']}의 최근 주가 데이터입니다:
         {state['df'].to_string(index=False)}
@@ -307,7 +305,7 @@ class ChartAnalysisNode(BaseNode):
         state["chart_analysis"] = response.content
         return state
 
-    def predict_future(self, state: ChartAnalysisState):
+    def predict_future(self, state: State):
         prompt = f"""
         최근 {state['symbol']}의 주가 데이터입니다:
         {state['df'].to_string(index=False)}
@@ -326,7 +324,7 @@ class ChartAnalysisNode(BaseNode):
         state["future_prediction"] = response.content
         return state
 
-    def plot_chart(self, state: ChartAnalysisState):
+    def plot_chart(self, state: State):
         plt.figure(figsize=(10, 5))
         plt.plot(
             state["df"]["date"],
@@ -347,7 +345,7 @@ class ChartAnalysisNode(BaseNode):
         state["chart_path"] = f"/static/charts/{state['symbol']}_chart.png"
         return state
 
-    async def invoke(self, state: ChartAnalysisState):
+    async def invoke(self, state: State):
 
         systemp_prmopt = "\n".join(
             [
@@ -366,7 +364,7 @@ class ChartAnalysisNode(BaseNode):
 
         prompt = (
             [{"role": "system", "content": systemp_prmopt}]
-            + convertChatToPrompt(state["common"]["history"])
+            + convertChatToPrompt(state["common"]["histories"])
             + convertChatToPrompt(state["common"]["messages"])
         )
 

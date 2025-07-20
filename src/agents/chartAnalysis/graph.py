@@ -1,10 +1,8 @@
-import json
 from langchain_openai import ChatOpenAI
-from typing_extensions import Self
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.state import CompiledStateGraph
+from src.agents.supervisor.state import State
 from src.config import Global
-from src.agents.chartAnalysis.state import ChartAnalysisState
 from src.agents.chartAnalysis.node import ChartAnalysisNode
 from src.utils.graphBuilder import GraphBuilder
 
@@ -14,7 +12,7 @@ class ChartAnalysisGraph(GraphBuilder):
     graph: CompiledStateGraph
 
     def __init__(self, llm: ChatOpenAI | None = None):
-        self._builder = StateGraph(ChartAnalysisState)
+        self._builder = StateGraph(State)
         self.llm = (
             llm
             if llm
@@ -44,14 +42,7 @@ class ChartAnalysisGraph(GraphBuilder):
     def get_edges(self) -> list[tuple[str, str]]:
         return self._builder.edges()
 
-    async def invoke(self, state: ChartAnalysisState):
+    async def invoke(self, state: State):
+        response: State = await self.graph.ainvoke(state)
 
-        print(
-            f"--------------------------------Chart Analysis input: {state['common']['messages'][-1]}--------------------------------"
-        )
-        response: ChartAnalysisState = await self.graph.ainvoke(state)
-        print(
-            f"--------------------------------Chart Analysis response: {response['common']['messages'][-1]}--------------------------------\n"
-        )
-
-        return state
+        return response

@@ -2,12 +2,12 @@
 #!/bin/bash
 export PATH="$HOME/.local/bin:$PATH"
 
-poetry env activate
+source .venv/bin/activate
 
-poetry install
+uv sync
 
-poetry run prisma db push --schema=prisma
+uv run prisma db push --schema=prisma
 
-poetry run prisma generate --schema=prisma
+uv run prisma generate --schema=prisma
 
-poetry run uvicorn src.main:app --reload --port 8000 --host 0.0.0.0
+uv run uvicorn src.main:app --reload --port 8000 --host 0.0.0.0

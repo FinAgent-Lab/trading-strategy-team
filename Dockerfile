@@ -10,20 +10,19 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# poetry 설치
-RUN curl -sSL https://install.python-poetry.org | python3 -
+# uv 설치 (via 공식 install script)
+RUN curl -Ls https://astral.sh/uv/install.sh | bash
 
-# poetry를 PATH에 추가
 ENV PATH="/root/.local/bin:$PATH"
 
 # 로컬의 poetry.lock과 pyproject.toml을 컨테이너로 복사
-COPY pyproject.toml poetry.lock /app/
+COPY pyproject.toml uv.lock /app/
 
 # 작업 디렉토리 설정
 WORKDIR /app
 
 # 의존성 설치
-RUN poetry install --no-root
+RUN uv venv && . .venv/bin/activate && uv sync
 
 # 로컬의 src 디렉토리를 컨테이너의 /app/src로 복사
 COPY src /app/src
@@ -31,7 +30,7 @@ COPY src /app/src
 # Prisma 설정
 COPY prisma /app/prisma
 
-RUN poetry run prisma generate --schema=./prisma
+RUN uv run prisma generate --schema=./prisma
 
 # uvicorn을 사용하여 main.py를 실행
-CMD ["poetry", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

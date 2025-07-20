@@ -1,11 +1,16 @@
 from typing import Annotated, TypedDict
-from src.agents.common.states.common import CommonState
+from src.agents.chartAnalysis.state import ChartAnalysisState
+from src.agents.idea.state import IdeaState
+from src.agents.factor.state import FactorAgentState
+from src.agents.investment.state import InvestmentState
+from src.agents.common.state import CommonState
 
 
-class SupervisorState(TypedDict):
+class State(TypedDict):
     common: Annotated[CommonState, "common"]
 
-    # Supervisor의 각 노드(여기서는 Graph)에서 사용되는 상태
-    hypothesis: Annotated[dict, "종목별 생성된 가설 정보"]
-
-    final_alpha: Annotated[dict, "종목별 최종 알파 값"]
+    # State of each agent
+    chart_analysis: Annotated[ChartAnalysisState, "chart analysis"]
+    idea: Annotated[IdeaState, "idea"]
+    factor: Annotated[FactorAgentState, "factor"]
+    investment: Annotated[InvestmentState, "investment"]

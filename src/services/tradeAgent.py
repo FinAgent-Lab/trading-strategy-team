@@ -5,7 +5,7 @@ from src.agents.factor.graph import factor_agent_graph
 from src.agents.supervisor.graph import SupervisorGraph
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.messages import HumanMessage
-from src.agents.supervisor.state import SupervisorState
+from src.agents.supervisor.state import State
 from src.dtos.chat.chatDto import CreateChatDto
 from src.services.chat import ChatService
 from src.services.kis import KisService
@@ -57,23 +57,25 @@ class TradeAgentService:
 
         user_info = await self.user_service.get_user_info(user_id)
 
-        history = await self.chat_service.get_chat_list(room_id)
+        chat_list = await self.chat_service.get_chat_list(room_id)
 
-        state: SupervisorState = {
+        histories = list(
+            map(lambda x: PromptType(role=x.role, content=x.content), chat_list.chats)
+        )
+
+        user_input = PromptType(role=ChatRole.USER, content=input)
+
+        state: State = {
             "common": {
-                "room": {
-                    "id": room_id,
-                },
-                "user": {
-                    "id": user_id,
-                    "account_number": user_info["account_number"],
-                    "app_key": user_info["app_key"],
-                    "app_secret": user_info["secret_key"],
-                    "access_token": access_token,
-                },
-                "messages": [PromptType(role=ChatRole.USER, content=input)],
-                "history": history.chats,
+                "access_token": access_token,
+                "histories": histories,
+                "messages": [user_input],
+                "account": user_info["account_number"],
             },
+            "chart_analysis": {},
+            "idea": {},
+            "factor": {},
+            "investment": {},
         }
 
         await self.chat_service.create_chat(
@@ -99,7 +101,7 @@ class TradeAgentService:
     async def chat_investment_agent(self, room_id: str, user_id: str, input: str):
         user_info = await self.user_service.get_user_info(user_id)
 
-        state: SupervisorState = {
+        state: State = {
             "common": {
                 "room": {"id": room_id},
                 "user": {
