@@ -2,11 +2,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path
 from src.guards.jwtGuard import jwt_guard
 from src.dtos.tradingAgent.chatDto import TradingAgentChatDto
+from src.services.chat import ChatService
 from src.services.tradeAgent import TradeAgentService
 from src.services.chartAnalysis import ChartAnalysisService
 from src.dtos.chartAnalysis.analysisDto import ChartAnalysisRequest
 from src.services.kis import KisService
 from langchain_core.tools import tool
+
+from src.services.user import UserService
 
 agent_router = router = APIRouter()
 
@@ -22,6 +25,18 @@ async def chat_trade_agent(
 ):
 
     return await trade_agent_service.chat_trade_agent(room_id, user_id, input.message)
+
+
+@router.post("/trade/chat")
+async def chat_trade_agent(
+    input: TradingAgentChatDto,
+    trade_agent_service: TradeAgentService = Depends(lambda: TradeAgentService()),
+):
+    user = await UserService().get_first_user()
+
+    room_id = await ChatService().create_room("default room name", user.id)
+
+    return await trade_agent_service.chat_trade_agent(room_id, user.id, input.message)
 
 
 @router.post("/chart-analysis", tags=["chart-analysis"])

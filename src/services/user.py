@@ -28,6 +28,15 @@ class UserService:
         ):  # 이미 초기화된 경우는 다시 초기화하지 않음
             self._initialized = True
 
+    # TODO: REMOVE THIS. THIS IS ONLY FOR TEST.
+    async def get_first_user(self):
+        user = await prisma.user.find_first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User Not Found.")
+
+        return user
+
     async def sign_up(self, input: SignUpDto):
         exist_user = await prisma.user.find_unique(where={"email": input.email})
 
