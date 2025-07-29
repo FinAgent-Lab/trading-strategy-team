@@ -30,7 +30,7 @@ COPY src /app/src
 # Prisma 설정
 COPY prisma /app/prisma
 
-RUN uv run prisma db push --schema=./prisma && uv run prisma generate --schema=./prisma
+RUN uv run prisma generate --schema=./prisma
 
 # uvicorn을 사용하여 main.py를 실행
 CMD ["uv", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
