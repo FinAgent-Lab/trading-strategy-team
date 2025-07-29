@@ -29,6 +29,7 @@ jobs:
           echo "$SECRETS_CONTEXT" | jq -r 'to_entries | map("\(.key)=\(.value|tostring)") | .[]' > .env
 
       - name: Build and run docker-compose
+        working-directory: /root/actions-runner/_work/${{ github.repository }}/${{ github.repository }}
         run: |
           docker compose down --remove-orphans
           docker compose build --no-cache
