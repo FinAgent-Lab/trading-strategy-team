@@ -1,5 +1,7 @@
 version: "3.8"
 
+version: "3.8"
+
 services:
   app:
     build:
@@ -9,11 +11,17 @@ services:
       - "8000:8000"
     depends_on:
       - postgres
-    environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
     env_file:
       - .env
-
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+    command: >
+      sh -c "
+        echo '⏳ Waiting for DB...';
+        sleep 5;
+        uv run prisma db push --schema=./prisma &&
+        uv run uvicorn src.main:app --host 0.0.0.0 --port 8000
+      "
   postgres:
     image: pgvector/pgvector:pg17
     container_name: trading-pgvector
