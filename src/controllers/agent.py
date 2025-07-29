@@ -34,9 +34,9 @@ async def chat_trade_agent(
 ):
     user = await UserService().get_first_user()
 
-    room_id = await ChatService().create_room("default room name", user.id)
+    room = await ChatService().create_room("default room name", user.id)
 
-    return await trade_agent_service.chat_trade_agent(room_id, user.id, input.message)
+    return await trade_agent_service.chat_trade_agent(room.id, user.id, input.message)
 
 
 @router.post("/chart-analysis", tags=["chart-analysis"])
