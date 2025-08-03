@@ -1,6 +1,8 @@
 from src.agents.chartAnalysis.node import ChartAnalysisAgent
 import logging
 
+from src.agents.supervisor.state import State
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,7 +22,18 @@ class ChartAnalysisService:
     def analyze_stock(self, symbol: str, exchange: str = "NAS"):
         try:
             logger.info(f"Starting analysis for {symbol} on {exchange}")
-            result = self.agent.analyze_chart(symbol, exchange)
+
+            state: State = {
+                "common": {
+                    "access_token": "",
+                    "histories": [],
+                    "messages": [],
+                    "account": "",
+                },
+                "chart_analysis": {},
+            }
+
+            result = self.agent.analyze_chart(state)
             return result
         except Exception as e:
             logger.error(f"Error in analyze_stock: {str(e)}")
