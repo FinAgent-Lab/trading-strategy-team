@@ -6,7 +6,7 @@ services:
       context: .
     container_name: trading-server
     ports:
-      - "8000:8000"
+      - "8008:8000"
     depends_on:
       - postgres
     env_file:
