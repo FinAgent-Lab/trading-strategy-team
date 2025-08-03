@@ -19,6 +19,8 @@ from src.utils.functions.convertChatToPrompt import convertChatToPrompt
 from src.utils.types.ChatType import ChatRole
 from src.utils.types.PromptType import PromptType
 import pandas_ta as ta
+from src.services.kis import KisService
+
 
 # Tool의 입력 스키마 정의
 class GetStockDataInput(BaseModel):
@@ -37,6 +39,7 @@ class ChartAnalysisAgent(BaseNode):
     system_prompt: str
     prompt_template: ChatPromptTemplate
     tools: List[Tool]
+    kis_service: KisService
 
     def __init__(self, llm: ChatOpenAI | None = None):
         self.llm = (
@@ -48,7 +51,7 @@ class ChartAnalysisAgent(BaseNode):
         self.prompt_template = ChatPromptTemplate.from_messages(
             [("system", self.system_prompt), ("human", "{input}")]
         )
-
+        self.kis_service = KisService()
         # Tools
         self.tools = [
             Tool(
@@ -75,15 +78,22 @@ class ChartAnalysisAgent(BaseNode):
     #     response = self.kis_service.get_overseas_stock_daily_price(input_dict)
     #     return response
 
-    async def analyze_chart(self, symbol: str, exchange: str) -> str:
+    async def analyze_chart(self, state: State) -> str:
+        symbol = state["chart_analysis"]["symbol"]
+        exchange = state["chart_analysis"]["exchange"]
+
         try:
-            print(f"[ChartAnalysis] 차트 분석 시작 - 심볼: {symbol}, 거래소: {exchange}")
-            
+            print(
+                f"[ChartAnalysis] 차트 분석 시작 - 심볼: {symbol}, 거래소: {exchange}"
+            )
+
             # KisService에서 access_token 가져오기
             print("[ChartAnalysis] access_token 요청 중...")
-            access_token = self.kis_service.get_access_token()
-            print(f"[ChartAnalysis] access_token 획득 완료: {access_token[:20]}...")  # 토큰의 앞부분만 출력
-            
+            access_token = state["common"]["access_token"]
+            print(
+                f"[ChartAnalysis] access_token 획득 완료: {access_token[:20]}..."
+            )  # 토큰의 앞부분만 출력
+
             # Tool 입력 생성
             print("[ChartAnalysis] 주가 데이터 요청 준비 중...")
             tool_input = {
@@ -94,34 +104,36 @@ class ChartAnalysisAgent(BaseNode):
                     "SYMB": symbol,
                     "GUBN": "0",
                     "BYMD": "",
-                    "MODP": "0"
+                    "MODP": "0",
                 }
             }
             print("[ChartAnalysis] 입력 데이터 구성 완료")
-            
+
             # Tool 직접 호출
             print("[ChartAnalysis] KIS API 호출 중...")
-            result = get_overseas_stock_daily_price(tool_input)
+            result = await get_overseas_stock_daily_price(tool_input)
             print("[ChartAnalysis] KIS API 응답 수신")
             print(f"[ChartAnalysis] 응답 데이터: {result}")
-            
-            if result.get('rt_cd') != '0':
+
+            if result.get("rt_cd") != "0":
                 raise Exception(f"API 오류: {result.get('msg1', '알 수 없는 오류')}")
-                
-            output2_list = result.get('output2', [])
+
+            output2_list = result.get("output2", [])
             if output2_list and len(output2_list) > 0:
                 data_list = []
                 for output2 in output2_list:
-                    date_str = output2['xymd']
+                    date_str = output2["xymd"]
                     formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
-                    data_list.append({
-                        'date': formatted_date,
-                        'close': float(output2['clos']),
-                        'open': float(output2['open']),
-                        'high': float(output2['high']),
-                        'low': float(output2['low']),
-                        'volume': int(output2['tvol'])
-                    })
+                    data_list.append(
+                        {
+                            "date": formatted_date,
+                            "close": float(output2["clos"]),
+                            "open": float(output2["open"]),
+                            "high": float(output2["high"]),
+                            "low": float(output2["low"]),
+                            "volume": int(output2["tvol"]),
+                        }
+                    )
 
                 data = pd.DataFrame(data_list)
                 data["date"] = pd.to_datetime(data["date"])
@@ -146,7 +158,9 @@ class ChartAnalysisAgent(BaseNode):
                 data["BB_lower"] = bbands["BBL_20_2.0"]
 
                 # ✅ ADX (Average Directional Index) 계산 (기본: 14일 기준)
-                adx = ta.adx(high=data["high"], low=data["low"], close=data["close"], length=14)
+                adx = ta.adx(
+                    high=data["high"], low=data["low"], close=data["close"], length=14
+                )
                 data["ADX_14"] = adx["ADX_14"]
 
                 print(f"[ChartAnalysis] 데이터프레임 생성 완료 (총 {len(data)} 행):")
@@ -181,11 +195,11 @@ class ChartAnalysisAgent(BaseNode):
                 analysis_result = self.llm.invoke(analysis_prompt)
                 print("[ChartAnalysis] AI 분석 완료")
 
-                return analysis_result
+                return analysis_result.content
             else:
                 print("[ChartAnalysis] 오류: output2 데이터가 없습니다")
                 return "주가 데이터를 가져오는데 실패했습니다."
-            
+
         except Exception as e:
             error_msg = f"[ChartAnalysis] 오류 발생: {str(e)}"
             print(error_msg)
@@ -401,8 +415,8 @@ class ChartAnalysisNode(BaseNode):
                     detail=f"Invalid Structured Output in ChartAnalysisNode: {response}",
                 )
 
-            state["exchange"] = response.exchange
-            state["symbol"] = response.symbol
+            state["chart_analysis"]["exchange"] = response.exchange
+            state["chart_analysis"]["symbol"] = response.symbol
 
             result = await self.agent.analyze_chart(state)
             # try:
