@@ -63,14 +63,21 @@ async def user_info_init():
 
     try:
 
-        user = await prisma.user.create(
+        user = await prisma.user.upsert(
             data={
-                "name": "Test User",
-                "email": "user@example.com",
-                "password": password,
-                "id": str(uuid4()),
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }
+                "create": {
+                    "name": "Test User",
+                    "email": "user@example.com",
+                    "password": password,
+                    "id": str(uuid4()),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                },
+                "update": {
+                    "password": password,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+            },
+            where={"email": "user@example.com"},
         )
 
     except Exception as e:
@@ -82,15 +89,30 @@ async def user_info_init():
     user_id = user.id
 
     # 초기 계좌 생성
+
     try:
-        await prisma.useraccount.create(
-            data={
-                "id": str(uuid4()),
+        user_account = await prisma.useraccount.find_first(
+            where={
                 "user_id": user_id,
-                "account": Global.env.KIS_ACCOUNT_NUMBER,
                 "provider": UserAccountProvider.KIS,
-                "created_at": datetime.now(timezone.utc).isoformat(),
             }
+        )
+
+        await prisma.useraccount.upsert(
+            data={
+                "create": {
+                    "id": str(uuid4()),
+                    "user_id": user_id,
+                    "account": Global.env.KIS_ACCOUNT_NUMBER,
+                    "provider": UserAccountProvider.KIS,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                },
+                "update": {
+                    "account": Global.env.KIS_ACCOUNT_NUMBER,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+            },
+            where={"id": user_account.id},
         )
     except Exception as e:
         print(e)
@@ -99,24 +121,48 @@ async def user_info_init():
 
     # 초기 KIS Secret 값들 생성
     try:
-        await prisma.usersecret.create(
+        await prisma.usersecret.upsert(
             data={
-                "id": str(uuid4()),
-                "user_id": user_id,
-                "value": Global.env.KIS_APP_KEY,
-                "key": UserSecretProvider.KIS_APP_KEY,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }
+                "create": {
+                    "id": str(uuid4()),
+                    "user_id": user_id,
+                    "value": Global.env.KIS_APP_KEY,
+                    "key": UserSecretProvider.KIS_APP_KEY,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                },
+                "update": {
+                    "value": Global.env.KIS_APP_KEY,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+            },
+            where={
+                "key_user_id": {
+                    "key": UserSecretProvider.KIS_APP_KEY,
+                    "user_id": user_id,
+                }
+            },
         )
 
-        await prisma.usersecret.create(
+        await prisma.usersecret.upsert(
             data={
-                "id": str(uuid4()),
-                "user_id": user_id,
-                "value": Global.env.KIS_SECRET_KEY,
-                "key": UserSecretProvider.KIS_SECRET_KEY,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            }
+                "create": {
+                    "id": str(uuid4()),
+                    "user_id": user_id,
+                    "value": Global.env.KIS_SECRET_KEY,
+                    "key": UserSecretProvider.KIS_SECRET_KEY,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                },
+                "update": {
+                    "value": Global.env.KIS_SECRET_KEY,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+            },
+            where={
+                "key_user_id": {
+                    "key": UserSecretProvider.KIS_SECRET_KEY,
+                    "user_id": user_id,
+                }
+            },
         )
     except Exception as e:
         print(e)
