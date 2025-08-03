@@ -20,6 +20,9 @@ services:
         uv run prisma db push --schema=./prisma &&
         uv run uvicorn src.main:app --host 0.0.0.0 --port 8000
       "
+    networks:
+      - trading-network
+
   postgres:
     image: pgvector/pgvector:pg17
     container_name: trading-pgvector
@@ -32,6 +35,13 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - trading-network
 
 volumes:
   pg_data:
+
+networks:
+  trading-network:
+    driver: bridge
+    name: trading-network
